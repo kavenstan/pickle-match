@@ -1,19 +1,16 @@
 <!-- src/routes/index.svelte -->
 <script lang="ts">
 	import { db } from '$lib/firebase';
-	import { collection, getDocs } from 'firebase/firestore';
+	import type { Player } from '$lib/types';
+	import { collection, getDocs, query, orderBy } from 'firebase/firestore';
 	import { onMount } from 'svelte';
-
-	interface Player {
-		id: string;
-		name: string;
-		rating: number;
-	}
 
 	let players: Player[] = [];
 
 	onMount(async () => {
-		const querySnapshot = await getDocs(collection(db, 'players'));
+		const querySnapshot = await getDocs(
+			query(collection(db, 'players'), orderBy('rating', 'desc'))
+		);
 		players = querySnapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })) as Player[];
 	});
 </script>

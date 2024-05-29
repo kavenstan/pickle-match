@@ -5,82 +5,79 @@
 		GoogleAuthProvider,
 		onAuthStateChanged,
 		signInWithPopup,
-		signOut,
-		type Auth,
-		type User
+		type Auth
 	} from 'firebase/auth';
-	import { app } from '$lib/firebase'; // Adjust the import if necessary
+	import { app } from '$lib/firebase';
+	import { showModal } from '$lib/store';
+	import { session } from '$lib/user';
 
 	let auth: Auth;
 	let provider: GoogleAuthProvider;
-	let user: User | null;
+	let modal: HTMLDialogElement | null = null;
+
+	$: showModal.subscribe((value) => {
+		if (value) {
+			modal?.showModal();
+		} else {
+			modal?.close();
+		}
+	});
 
 	onMount(() => {
 		auth = getAuth(app);
 		provider = new GoogleAuthProvider();
 		onAuthStateChanged(auth, (newUser) => {
-			user = newUser;
+			// console.log('onAuthStateChanged', auth, newUser);
+			session.update((curr) => {
+				return { ...curr, isLoading: false, user: newUser };
+			});
+			modal?.close();
 		});
+
+		modal?.addEventListener('click', handleDialogClick);
+		window.addEventListener('keydown', handleKeyDown);
+
+		return () => {
+			modal?.removeEventListener('click', handleDialogClick);
+			window.removeEventListener('keydown', handleKeyDown);
+		};
 	});
 
 	const signInWithGoogle = async () => {
 		try {
 			const result = await signInWithPopup(auth, provider);
-			console.log('User signed in: ', result.user);
+			console.log('User signed in: ', result.user.email);
 		} catch (error) {
 			console.error('Error signing in: ', error);
 		}
 	};
 
-	const logOut = async () => {
-		const result = await signOut(auth);
-	};
+	function handleDialogClick(event: MouseEvent) {
+		if (event.target === modal) {
+			closeModal();
+		}
+	}
 
-	export let showModal: boolean;
-	const closeModal = () => (showModal = false);
+	function handleKeyDown(event: KeyboardEvent) {
+		if (event.key === 'Escape') {
+			closeModal();
+		}
+	}
+
+	const closeModal = () => {
+		showModal.set(false);
+	};
 </script>
 
-<dialog open={showModal}>
+<dialog bind:this={modal}>
 	<article>
-		{#if user}
-			<h2>Log In</h2>
-			<button on:click={signInWithGoogle}>Sign in with Google</button>
-			<footer>
-				<button on:click={closeModal} class="secondary"> Cancel </button>
-			</footer>
-		{:else}
-			<h2>Log Out</h2>
-			<button on:click={logOut}> Log Out </button>
-			<footer>
-				<button on:click={closeModal} class="secondary"> Cancel </button>
-			</footer>
-		{/if}
+		<h2>Log In</h2>
+		<button on:click={signInWithGoogle}>Sign in with Google</button>
+		<footer>
+			<button on:click={closeModal} class="secondary"> Cancel </button>
+		</footer>
 	</article>
 </dialog>
 
-<!-- <div class:modal-overlay={showModal} on:click={closeModal}>
-	<div class="modal-content" on:click|stopPropagation>
-		<button on:click={signInWithGoogle}>Sign in with Google</button>
-		<button on:click={closeModal}>Close</button>
-	</div>
-</div> -->
-
 <style>
-	.modal-overlay {
-		position: fixed;
-		top: 0;
-		left: 0;
-		width: 100%;
-		height: 100%;
-		background: rgba(0, 0, 0, 0.5);
-		display: flex;
-		align-items: center;
-		justify-content: center;
-	}
-	.modal-content {
-		background: white;
-		padding: 2rem;
-		border-radius: 8px;
-		box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-	}
 </style>

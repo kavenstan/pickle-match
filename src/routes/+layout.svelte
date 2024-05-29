@@ -1,18 +1,20 @@
 <script>
 	import Header from './Header.svelte';
-	import Login from './Login.svelte';
 	import './styles.css';
-
-	let showModal = false;
-	const toggleModal = () => (showModal = !showModal);
 </script>
 
 <div class="app">
-	<Header {toggleModal} />
+	<Header />
 
-	<main>
+	<main class="content">
 		<slot />
 	</main>
 </div>
 
-<Login {showModal} />
+<style>
+	.content {
+		max-width: 1200px;
+		margin: 0 auto;
+		padding: 1rem;
+	}
+</style>
