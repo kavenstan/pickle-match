@@ -1,3 +1,5 @@
+import type { SessionState } from './user';
+
 export interface Player {
 	id: string;
 	name: string;
@@ -5,8 +7,10 @@ export interface Player {
 }
 
 export interface Session {
+	id?: string | null;
 	config: Config;
-	date: Date;
+	state: State;
+	date: string;
 	location: string;
 	rounds: Round[];
 }
@@ -14,13 +18,24 @@ export interface Session {
 export interface Config {
 	courtsAvailable: number;
 	players: string[];
+	status: string;
+	matchmakingAlgorithm: string;
+	ratingDiffLimit: number;
+	maxIterations: number;
+}
+
+export interface State {
+	sitOutOrder: string[];
+	sitOutIndex: number;
 }
 
 export interface Round {
+	id: string | null;
 	matches: Match[];
 }
 
 export interface Match {
+	id: string | null;
 	team1: string[];
 	team2: string[];
 	team1Score: number;

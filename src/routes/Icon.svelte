@@ -15,7 +15,7 @@
 <style>
 	line {
 		stroke-linecap: round;
-		stroke: var(--secondary-color);
+		stroke: var(--accent-color);
 	}
 	.line {
 		stroke-width: 16;

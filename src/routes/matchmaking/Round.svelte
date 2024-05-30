@@ -4,13 +4,15 @@
 
 	export let round: RoundType;
 	export let number: number;
-	// export let editable: boolean = false;
+	export let sessionId: string;
+
+	export let editable: boolean = false;
 </script>
 
 <div class="round">
-	<div class="title">Round {number}</div>
+	<div class="round-title">Round {number}</div>
 	{#each round.matches as match}
-		<Match {match} />
+		<Match {match} {editable} {sessionId} />
 	{/each}
 </div>
 
@@ -18,8 +20,7 @@
 	.round {
 		margin-bottom: 1rem;
 	}
-	.title {
-		width: 20rem;
+	.round-title {
 		border: 1px solid black;
 		text-align: center;
 		font-weight: bold;

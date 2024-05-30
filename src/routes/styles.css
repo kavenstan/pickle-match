@@ -1,7 +1,7 @@
 :root {
 	--primary-color: #2c3e50;
-	--secondary-color: #ffff00;
-	--accent-color: #c0392b;
+	--secondary-color: #0172ad;
+	--accent-color: #ffff00;
 	--light-color: #ddd;
 }
 
@@ -9,4 +9,30 @@
 	--primary-color: #3498db;
 	--secondary-color: #2ecc71;
 	--accent-color: #e74c3c;
+}
+
+button,
+nav li button {
+	padding: 0.25rem 0.5rem;
+}
+
+.title {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	margin-bottom: 2rem;
+}
+.title h1,
+.title h2,
+.title h3 {
+	margin: 0;
+}
+
+dialog footer {
+	display: flex;
+	justify-content: space-between;
+}
+
+.error {
+	color: red;
 }

@@ -7,6 +7,7 @@
 	import { getAuth, signOut, type Auth } from 'firebase/auth';
 	import { app } from '$lib/firebase';
 	import Icon from './Icon.svelte';
+	import 'iconify-icon';
 
 	let auth: Auth;
 
@@ -47,11 +48,15 @@
 					<a href="/upload">Upload</a>
 				</li>
 				<li>
-					<button on:click={logOut}>Sign Out</button>
+					<button on:click={logOut}
+						><iconify-icon icon="iconamoon:profile-fill"></iconify-icon></button
+					>
 				</li>
 			{:else}
 				<li>
-					<button on:click={openModal}>Sign In</button>
+					<button on:click={openModal}
+						><iconify-icon icon="iconamoon:profile"></iconify-icon></button
+					>
 				</li>
 			{/if}
 		</ul>
@@ -67,21 +72,27 @@
 	nav {
 		max-width: 1200px;
 		margin: 0 auto;
-		padding: 0.25rem 0.5rem;
+		padding: 0.25rem 1rem;
 		display: flex;
 		justify-content: space-between;
+	}
+	nav li {
+		padding: 0.25rem 0.5rem;
 	}
 	nav > a {
 		place-content: center;
 		text-decoration: none;
 		font-size: 2rem;
-		line-height: 1rem;
 		font-weight: bold;
-		color: var(--secondary-color);
+		color: var(--accent-color);
 		display: flex;
 		align-items: center;
 	}
 	nav > a span {
 		margin-left: 0.25rem;
+	}
+	nav button {
+		display: flex;
+		align-items: center;
 	}
 </style>
