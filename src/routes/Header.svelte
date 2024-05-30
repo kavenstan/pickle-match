@@ -6,6 +6,7 @@
 	import { session } from '$lib/user';
 	import { getAuth, signOut, type Auth } from 'firebase/auth';
 	import { app } from '$lib/firebase';
+	import Icon from './Icon.svelte';
 
 	let auth: Auth;
 
@@ -33,7 +34,7 @@
 
 <header>
 	<nav>
-		<a href="/">[Logo?] MatchPickle</a>
+		<a href="/"><Icon /><span>Pick It</span></a>
 		<ul>
 			<li aria-current={$page.url.pathname === '/ratings' ? 'page' : undefined}>
 				<a href="/ratings">Ratings</a>
@@ -66,11 +67,21 @@
 	nav {
 		max-width: 1200px;
 		margin: 0 auto;
-		padding: 1rem;
+		padding: 0.25rem 0.5rem;
 		display: flex;
 		justify-content: space-between;
 	}
-	nav a {
+	nav > a {
 		place-content: center;
+		text-decoration: none;
+		font-size: 2rem;
+		line-height: 1rem;
+		font-weight: bold;
+		color: var(--secondary-color);
+		display: flex;
+		align-items: center;
+	}
+	nav > a span {
+		margin-left: 0.25rem;
 	}
 </style>
