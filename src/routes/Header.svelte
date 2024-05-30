@@ -69,6 +69,11 @@
 	header {
 		background-color: var(--primary-color);
 	}
+	@media only screen and (max-width: 1026px) {
+		header > nav > a > span {
+			display: none;
+		}
+	}
 	nav {
 		max-width: 1200px;
 		margin: 0 auto;
