@@ -11,7 +11,7 @@ import {
 	doc,
 	getDoc
 } from 'firebase/firestore';
-import type { Session, Player, Match } from './types';
+import type { Session, Player, Match, Round } from './types';
 import { db } from '$lib/firebase';
 
 const collection_players = 'players';
@@ -55,6 +55,19 @@ export async function getSession(session: Session): Promise<Session> {
 }
 
 // Session.Match
+export async function addNewSessionRound(sessionId: string, round: Round): Promise<void> {
+	const sessionRef = doc(db, 'sessions', sessionId);
+	const sessionDoc = await getDoc(sessionRef);
+
+	if (sessionDoc.exists()) {
+		const sessionData = sessionDoc.data() as Session;
+
+		const updatedRounds = sessionData.rounds;
+		updatedRounds.push(round);
+
+		await updateDoc(sessionRef, { rounds: updatedRounds });
+	}
+}
 
 export async function updateMatchScore(sessionId: string, updatedMatch: Match): Promise<void> {
 	// console.log('Update match score', sessionId, updatedMatch);

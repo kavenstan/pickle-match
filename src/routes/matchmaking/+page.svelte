@@ -10,7 +10,7 @@
 		addPlayer,
 		addSession,
 		getSession,
-		updateSession
+		addNewSessionRound
 	} from '$lib/repo';
 
 	let sessions: Session[] = [];
@@ -63,8 +63,7 @@
 
 	const addNewRound = async () => {
 		let round = createRound(currentSession!, players);
-		currentSession!.rounds.push(round);
-		await updateSession(currentSession!);
+		await addNewSessionRound(currentSession!.id!, round);
 		currentSession = await getSession(currentSession!);
 	};
 
