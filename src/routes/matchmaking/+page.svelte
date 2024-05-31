@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { session } from '$lib/user';
-	import type { Player, Session } from '$lib/types';
+	import { MatchmakingType, type Player, type Session } from '$lib/types';
 	import { createRound } from '$lib/matchmaking';
 	import { onMount } from 'svelte';
 	import Round from './Round.svelte';
@@ -28,7 +28,7 @@
 	let currentSession: Session | null = null;
 
 	let courts: number = 4;
-	let matchmakingAlgorithm: string = 'random';
+	let matchmakingAlgorithm: MatchmakingType = MatchmakingType.Random;
 
 	let step: number = 0;
 	const totalSteps = 3;
@@ -102,7 +102,7 @@
 		step = 0;
 		selectedPlayerIds = [];
 		courts = 4;
-		matchmakingAlgorithm = 'random';
+		matchmakingAlgorithm = MatchmakingType.Random;
 	};
 
 	const startSession = async () => {

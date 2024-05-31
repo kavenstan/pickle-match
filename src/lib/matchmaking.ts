@@ -1,25 +1,38 @@
-import type { Player, Round, Session, Config, Match, State } from './types';
+import { playersPerCourt } from './consts';
+import { getPresets } from './preset';
+import type { Player, Round, Session, Config, Match } from './types';
 import { v4 as uuidv4 } from 'uuid';
 
 export const createRound = (session: Session, allPlayers: Player[]): Round => {
-	const players = allPlayers.filter((player) =>
+	const sessionPlayers = allPlayers.filter((player) =>
 		session.config.players.some((playerName) => playerName === player.name)
 	);
 
-	const playerRatings = new Map<string, number>();
-	allPlayers.forEach((p) => {
-		playerRatings.set(p.name, p.rating);
-	});
+	const previousPairingSet = previousPairings(session.rounds);
 
-	const previousPairings = new Set(
-		session.rounds.flatMap((round) =>
-			round.matches.flatMap((match) => {
-				return [match.team1.join(','), match.team2.join(',')];
-			})
-		)
+	let [playingPlayers, sitOutPlayerNames] = splitGroupForSitOuts(sessionPlayers, session);
+
+	let matches = createMatches(playingPlayers, session.config, previousPairingSet);
+
+	if (matches.length > 0) {
+		session.state.sitOutIndex =
+			(session.state.sitOutIndex + sitOutPlayerNames.length) % session.state.sitOutOrder.length;
+		return { id: uuidv4(), matches };
+	}
+
+	throw new Error('Failed to create a valid round within max iterations');
+};
+
+const previousPairings = (rounds: Round[]): Set<string> => {
+	let nameCombos = rounds.flatMap((round) =>
+		round.matches.flatMap((match) => {
+			return [match.team1.join(','), match.team2.join(',')];
+		})
 	);
+	return new Set(nameCombos);
+};
 
-	const playersPerCourt = 4;
+const splitGroupForSitOuts = (players: Player[], session: Session): [Player[], string[]] => {
 	const totalPlayers = players.length;
 	const courtCapacity = session.config.courtsAvailable * playersPerCourt;
 	const sitOutCount =
@@ -33,11 +46,105 @@ export const createRound = (session: Session, allPlayers: Player[]): Round => {
 	}
 	const playingPlayers = players.filter((player) => !sitOutPlayers.includes(player.name));
 
-	let iterations = 0;
-	let currentRatingDiffLimit = session.config.ratingDiffLimit;
+	return [playingPlayers, sitOutPlayers];
+};
 
-	while (iterations < session.config.maxIterations) {
-		const shuffledPlayers = [...playingPlayers].sort(() => 0.5 - Math.random());
+const createMatches = (
+	players: Player[],
+	config: Config,
+	previousPairings: Set<string>
+): Match[] => {
+	let matchPairings: Match[] = [];
+
+	switch (config.matchmakingAlgorithm) {
+		case 'Random':
+			matchPairings = randomMatchmaking(players, config);
+			break;
+		case 'RoundRobin':
+			matchPairings = roundRobinMatchmaking(players, config, previousPairings);
+			break;
+		case 'Balanced':
+			matchPairings = balancedMatchmaking(players, config, previousPairings);
+			break;
+		case 'Static':
+			matchPairings = staticMatchmaking(players, config);
+			break;
+		case 'Manual':
+			matchPairings = [];
+			break;
+		default:
+			throw new Error('Unknown matchmaking algorithm');
+	}
+
+	return matchPairings;
+};
+
+const randomMatchmaking = (players: Player[], config: Config): Match[] => {
+	let iterations = 0;
+	while (iterations < config.maxIterations) {
+		const shuffledPlayers = [...players].sort(() => 0.5 - Math.random());
+		const matches: Match[] = [];
+
+		for (let i = 0; i < shuffledPlayers.length; i += playersPerCourt) {
+			const team1 = [shuffledPlayers[i], shuffledPlayers[i + 1]];
+			const team2 = [shuffledPlayers[i + 2], shuffledPlayers[i + 3]];
+
+			if (isValidMatch(team1, team2, new Set<string>(), Infinity)) {
+				matches.push(createMatch(team1, team2));
+			} else {
+				break;
+			}
+		}
+
+		if (matches.length === players.length / playersPerCourt) {
+			return matches;
+		}
+
+		iterations++;
+	}
+	return [];
+};
+
+const roundRobinMatchmaking = (
+	players: Player[],
+	config: Config,
+	previousPairings: Set<string>
+): Match[] => {
+	let iterations = 0;
+	while (iterations < config.maxIterations) {
+		const shuffledPlayers = [...players].sort(() => 0.5 - Math.random());
+		const matches: Match[] = [];
+
+		for (let i = 0; i < shuffledPlayers.length; i += playersPerCourt) {
+			const team1 = [shuffledPlayers[i], shuffledPlayers[i + 1]];
+			const team2 = [shuffledPlayers[i + 2], shuffledPlayers[i + 3]];
+
+			if (isValidMatch(team1, team2, previousPairings, Infinity)) {
+				matches.push(createMatch(team1, team2));
+			} else {
+				break;
+			}
+		}
+
+		if (matches.length === players.length / playersPerCourt) {
+			return matches;
+		}
+
+		iterations++;
+	}
+	return [];
+};
+
+const balancedMatchmaking = (
+	players: Player[],
+	config: Config,
+	previousPairings: Set<string>
+): Match[] => {
+	let currentRatingDiffLimit = config.ratingDiffLimit;
+
+	let iterations = 0;
+	while (iterations < config.maxIterations) {
+		const shuffledPlayers = [...players].sort(() => 0.5 - Math.random());
 		const matches: Match[] = [];
 
 		for (let i = 0; i < shuffledPlayers.length; i += playersPerCourt) {
@@ -51,20 +158,47 @@ export const createRound = (session: Session, allPlayers: Player[]): Round => {
 			}
 		}
 
-		if (matches.length === playingPlayers.length / playersPerCourt) {
-			session.state.sitOutIndex =
-				(session.state.sitOutIndex + sitOutCount) % session.state.sitOutOrder.length;
-			return { id: uuidv4(), matches };
+		if (matches.length === players.length / playersPerCourt) {
+			return matches;
 		}
 
 		iterations++;
 
-		if (iterations % Math.ceil(session.config.maxIterations / 10) === 0) {
+		if (iterations % Math.ceil(config.maxIterations / 10) === 0) {
 			currentRatingDiffLimit *= 1.1;
 		}
 	}
+	return [];
+};
 
-	throw new Error('Failed to create a valid round within max iterations');
+const staticMatchmaking = (players: Player[], config: Config): Match[] => {
+	// Sort players by rating
+	players.sort((a, b) => a.rating - b.rating);
+
+	// let matchPairings: Round[] = [];
+	let matchPairings: Match[] = [];
+	const numPlayers = players.length;
+
+	const rounds = getPresets(numPlayers);
+
+	rounds.forEach((round) => {
+		const matches: Match[] = [];
+		const sitOuts: Player[] = [];
+
+		round.forEach((match) => {
+			if (Array.isArray(match)) {
+				const team1 = [players[match[0] - 1]];
+				const team2 = [players[match[1] - 1]];
+				matches.push(createMatch(team1, team2));
+			} else {
+				sitOuts.push(players[match - 1]);
+			}
+		});
+
+		matchPairings.push(...matches);
+	});
+
+	return matchPairings;
 };
 
 const isValidMatch = (
@@ -114,4 +248,17 @@ const createMatch = (team1: Player[], team2: Player[]): Match => {
 		team1Score: 0,
 		team2Score: 0
 	};
+};
+
+const addPlayer = async (session: Session, player: Player) => {
+	// TODO: Allow player to be removed and re-added?
+	// List of active players in the round as well as all players who have participated in a round
+	if (session.config.players.some((playerName) => playerName === player.name)) {
+		throw Error('Player already in session');
+	}
+
+	session.config.players.push(player.name);
+
+	session.state.sitOutOrder.splice(session.state.sitOutIndex, 0, player.name);
+	session.state.sitOutIndex += 1;
 };

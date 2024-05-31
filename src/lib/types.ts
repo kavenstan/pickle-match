@@ -19,7 +19,7 @@ export interface Config {
 	courtsAvailable: number;
 	players: string[];
 	status: string;
-	matchmakingAlgorithm: string;
+	matchmakingAlgorithm: MatchmakingType;
 	ratingDiffLimit: number;
 	maxIterations: number;
 }
@@ -40,4 +40,13 @@ export interface Match {
 	team2: string[];
 	team1Score: number;
 	team2Score: number;
+}
+
+export enum MatchmakingType {
+	Random = 'Random',
+	RoundRobin = 'RoundRobin',
+	Balanced = 'Balanced',
+	Static = 'Static',
+	Manual = 'Manual'
+	// LowMidHigh, // eg 16 players - 1-4 never play 12-16, so match pool is [1-11], [5-16]
 }
