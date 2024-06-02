@@ -1,18 +1,38 @@
 <script lang="ts">
-	import type { Round as RoundType } from '$lib/types';
-	import Match from './Match.svelte';
+	import ViewMatch from '$lib/components/ViewMatch.svelte';
+	import type { Match } from '$lib/types';
+	import EditMatch from './EditMatch.svelte';
 
-	export let round: RoundType;
-	export let number: number;
-	export let sessionId: string;
-
+	export let matches: Match[] = [];
 	export let editable: boolean = false;
+
+	const groupByRound = (matches: Match[]): [number, Match[]][] => {
+		const grouped = matches.reduce(
+			(acc, match) => {
+				(acc[match.round] = acc[match.round] || []).push(match);
+				return acc;
+			},
+			{} as Record<number, Match[]>
+		);
+
+		return Object.entries(grouped)
+			.map(([round, matches]) => [Number(round), matches] as [number, Match[]])
+			.sort((a, b) => a[0] - b[0]);
+	};
 </script>
 
 <div class="round">
-	<div class="round-title">Round {number}</div>
-	{#each round.matches as match}
-		<Match {match} {editable} {sessionId} />
+	{#each groupByRound(matches) as [round, roundMatches] (round)}
+		<div>
+			<div class="round-title">Round {round}</div>
+			{#each roundMatches as match}
+				{#if editable}
+					<ViewMatch {match} />
+				{:else}
+					<EditMatch {match} />
+				{/if}
+			{/each}
+		</div>
 	{/each}
 </div>
 

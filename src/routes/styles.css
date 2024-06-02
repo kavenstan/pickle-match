@@ -16,12 +16,30 @@ nav li button {
 	padding: 0.25rem 0.5rem;
 }
 
+button.pill {
+	border-radius: 20px;
+	padding: 0.25rem 1rem;
+	border-color: var(--secondary-color);
+	background-color: var(--secondary-color);
+}
+
+button.pill.outline {
+	background-color: transparent;
+}
+
+
+nav>a>svg {
+	margin-left: -4px;
+}
+
+
 .title {
 	display: flex;
 	justify-content: space-between;
 	align-items: center;
 	margin-bottom: 2rem;
 }
+
 .title h1,
 .title h2,
 .title h3 {

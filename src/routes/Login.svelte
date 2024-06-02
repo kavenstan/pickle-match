@@ -8,14 +8,14 @@
 		type Auth
 	} from 'firebase/auth';
 	import { app } from '$lib/firebase';
-	import { showModal } from '$lib/store';
-	import { session } from '$lib/user';
+	import { showLoginModal } from '$lib/store';
+	import { userSession } from '$lib/user';
 
 	let auth: Auth;
 	let provider: GoogleAuthProvider;
 	let modal: HTMLDialogElement | null = null;
 
-	$: showModal.subscribe((value) => {
+	$: showLoginModal.subscribe((value) => {
 		if (value) {
 			modal?.showModal();
 		} else {
@@ -28,7 +28,7 @@
 		provider = new GoogleAuthProvider();
 		onAuthStateChanged(auth, (newUser) => {
 			// console.log('onAuthStateChanged', auth, newUser);
-			session.update((curr) => {
+			userSession.update((curr) => {
 				return { ...curr, isLoading: false, user: newUser };
 			});
 			modal?.close();
@@ -65,7 +65,7 @@
 	}
 
 	const closeModal = () => {
-		showModal.set(false);
+		showLoginModal.set(false);
 	};
 </script>
 

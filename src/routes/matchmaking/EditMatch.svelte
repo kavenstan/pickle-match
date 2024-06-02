@@ -1,30 +1,24 @@
 <script lang="ts">
-	import { updateMatchScore } from '$lib/repo';
-	import type { Match as MatchType } from '$lib/types';
+	import { updateMatchScore } from '$lib/match';
+	import type { Match } from '$lib/types';
 
-	export let match: MatchType;
-	export let editable: boolean = false;
-	export let sessionId: string | null;
+	export let match: Match;
 
 	let team1Score = match.team1Score;
 	let team2Score = match.team2Score;
 
 	const handleScoreChange = async () => {
-		if (!editable) {
-			return;
-		}
-
 		const updatedMatch = { ...match, team1Score, team2Score };
 
 		try {
-			await updateMatchScore(sessionId!, updatedMatch);
+			await updateMatchScore(updatedMatch);
 			match = updatedMatch;
 		} catch (error) {
 			console.error(error);
 		}
 	};
 
-	const scoreClass = (match: MatchType, team: number) => {
+	const scoreClass = (match: Match, team: number) => {
 		if (match.team1Score === match.team2Score) {
 			return 'draw';
 		}
@@ -35,13 +29,13 @@
 	};
 </script>
 
-<div class="match">
-	<div class="team right">
-		<div>{match.team1[0]}</div>
-		<div>{match.team1[1]}</div>
-	</div>
-	<div class="score">
-		{#if editable}
+{#if match}
+	<div class="match">
+		<div class="team right">
+			<div>{match.team1[0]}</div>
+			<div>{match.team1[1]}</div>
+		</div>
+		<div class="score">
 			<input
 				type="number"
 				class={scoreClass(match, 1)}
@@ -54,18 +48,13 @@
 				on:change={handleScoreChange}
 				bind:value={team2Score}
 			/>
-		{:else}
-			<div class={scoreClass(match, 1)}>{match.team1Score < 10 ? '0' : ''}{match.team1Score}</div>
-			<div class={scoreClass(match, 2)}>
-				{match.team2Score < 10 ? '0' : ''}{match.team2Score}
-			</div>
-		{/if}
+		</div>
+		<div class="team">
+			<div>{match.team2[0]}</div>
+			<div>{match.team2[1]}</div>
+		</div>
 	</div>
-	<div class="team">
-		<div>{match.team2[0]}</div>
-		<div>{match.team2[1]}</div>
-	</div>
-</div>
+{/if}
 
 <style>
 	.match {
@@ -88,8 +77,6 @@
 	.score input {
 		width: 3rem;
 		text-align: center;
-	}
-	.score div {
 	}
 	.score {
 		display: flex;

@@ -1,18 +1,20 @@
 <!-- src/routes/index.svelte -->
 <script lang="ts">
-	import { fetchPlayers } from '$lib/repo';
+	import { recalculateRatings } from '$lib/elo';
+	import { removeMatches } from '$lib/match';
+	import { getPlayers } from '$lib/player';
 	import type { Player } from '$lib/types';
 	import { onMount } from 'svelte';
 
 	let players: Player[] = [];
 
 	onMount(async () => {
-		players = await fetchPlayers();
+		players = await getPlayers();
 	});
 </script>
 
 <h1>Ratings</h1>
-<table>
+<table class="ratings">
 	<thead>
 		<tr>
 			<th scope="col" class="ranking">#</th>
@@ -39,6 +41,11 @@
 	</tbody>
 </table>
 
+<!-- <button on:click={async () => await resetRatings()}>Reset Ratings</button> -->
+<button on:click={async () => await recalculateRatings()}>Recalculate Ratings</button>
+
+<!-- <button on:click={async () => await removeMatches()}>Remove Matches</button> -->
+
 <style>
 	td,
 	th {
@@ -52,5 +59,9 @@
 	}
 	.rating {
 		width: 60px;
+	}
+	.ratings {
+		max-width: 600px;
+		margin: auto;
 	}
 </style>

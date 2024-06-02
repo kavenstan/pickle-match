@@ -1,4 +1,5 @@
-import type { SessionState } from './user';
+import type { Timestamp } from 'firebase/firestore';
+import type { MatchmakingType, SessionStatus } from './enums';
 
 export interface Player {
 	id: string;
@@ -7,46 +8,42 @@ export interface Player {
 }
 
 export interface Session {
-	id?: string | null;
-	config: Config;
-	state: State;
-	date: string;
+	id: string;
+	date: Timestamp;
 	location: string;
-	rounds: Round[];
+	state: State;
+	config: Config;
 }
 
 export interface Config {
-	courtsAvailable: number;
-	players: string[];
-	status: string;
-	matchmakingAlgorithm: MatchmakingType;
+	courts: number;
+	matchmakingType: MatchmakingType;
 	ratingDiffLimit: number;
 	maxIterations: number;
 }
 
 export interface State {
+	status: SessionStatus;
+	currentRound: number;
+	activePlayers: string[];
+	allPlayers: string[];
 	sitOutOrder: string[];
 	sitOutIndex: number;
+	startRatings: PlayerRating[];
+	endRatings: PlayerRating[];
 }
 
-export interface Round {
-	id: string | null;
-	matches: Match[];
+export interface PlayerRating {
+	playerId: string;
+	rating: number;
 }
 
 export interface Match {
-	id: string | null;
+	sessionId: string;
+	round: number;
+	id: string;
 	team1: string[];
 	team2: string[];
 	team1Score: number;
 	team2Score: number;
-}
-
-export enum MatchmakingType {
-	Random = 'Random',
-	RoundRobin = 'RoundRobin',
-	Balanced = 'Balanced',
-	Static = 'Static',
-	Manual = 'Manual'
-	// LowMidHigh, // eg 16 players - 1-4 never play 12-16, so match pool is [1-11], [5-16]
 }

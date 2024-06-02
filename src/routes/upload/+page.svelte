@@ -1,8 +1,12 @@
 <script lang="ts">
 	import { writable } from 'svelte/store';
-	import { collection, doc, writeBatch, setDoc } from 'firebase/firestore';
+	import { collection, doc, writeBatch, setDoc, Timestamp } from 'firebase/firestore';
 	import { db } from '$lib/firebase';
-	import type { Player } from '$lib/types';
+	import type { Session, Player, Match } from '$lib/types';
+	import { addSession } from '$lib/session';
+	import { addMatches } from '$lib/match';
+	import { newId } from '$lib/utils';
+	import { MatchmakingType, SessionStatus } from '$lib/enums';
 
 	const fileContent = writable<string | null>(null);
 	const isLoading = writable(false);
@@ -65,23 +69,6 @@
 		}
 	}
 
-	async function uploadSessionToFirestore(session: any) {
-		isLoading.set(true);
-		error.set(null);
-
-		try {
-			const sessionRef = doc(collection(db, 'sessions'));
-			await setDoc(sessionRef, session);
-
-			alert('Data successfully imported to Firestore');
-		} catch (err) {
-			console.error('Error uploading to Firestore:', err);
-			error.set('Error uploading to Firestore');
-		} finally {
-			isLoading.set(false);
-		}
-	}
-
 	function parseAndUploadUser() {
 		fileContent.subscribe((content) => {
 			if (content) {
@@ -99,6 +86,7 @@
 		});
 	}
 
+	// TODO : After initial upload, this seems to be called every time a new file is set
 	async function parseAndUploadSession() {
 		fileContent.subscribe(async (content) => {
 			if (content) {
@@ -106,41 +94,60 @@
 					const csvData = parseDuprCSV(content);
 
 					const playerSet = new Set<string>();
-					const matches = csvData.map((row: any) => {
+
+					csvData.forEach((row) => {
 						playerSet.add(row.player1_team1);
 						playerSet.add(row.player2_team1);
 						playerSet.add(row.player1_team2);
 						playerSet.add(row.player2_team2);
-						return {
-							team1: [row.player1_team1, row.player2_team1],
-							team2: [row.player1_team2, row.player2_team2],
-							team1Score: row.score_team1,
-							team2Score: row.score_team2
-						};
 					});
 
 					const players = Array.from(playerSet);
+
 					const courtCount = Math.floor(players.length / 4);
 
-					const rounds = [];
-					for (let i = 0; i < matches.length; i += courtCount) {
-						const roundMatches = matches
-							.slice(i, i + courtCount)
-							.filter((match) => match.team1Score !== 0 || match.team2Score !== 0);
-						rounds.push({ matches: roundMatches });
-					}
-
-					const session = {
-						date: csvData[0].date,
+					const session: Session = {
+						id: newId(),
+						date: Timestamp.fromDate(new Date(csvData[0].date)),
 						location: 'Midleton',
 						config: {
-							players,
-							courtsAvailable: courtCount
+							courts: courtCount,
+							matchmakingType: MatchmakingType.RoundRobin,
+							maxIterations: 0,
+							ratingDiffLimit: 0
 						},
-						rounds
+						state: {
+							status: SessionStatus.Completed,
+							activePlayers: players,
+							allPlayers: players,
+							currentRound: 0,
+							sitOutOrder: players,
+							sitOutIndex: 0,
+							startRatings: [],
+							endRatings: []
+						}
 					};
 					console.log(session);
-					await uploadSessionToFirestore(session);
+					const createdSession = await addSession(session);
+
+					const matches: Match[] = csvData.map((row: any, i) => {
+						let round = Math.floor(i / courtCount) + 1;
+						return {
+							id: newId(),
+							sessionId: session.id,
+							team1: [row.player1_team1, row.player2_team1],
+							team2: [row.player1_team2, row.player2_team2],
+							team1Score: row.score_team1,
+							team2Score: row.score_team2,
+							round
+						} as Match;
+					});
+
+					var validMatches = matches.filter(
+						(match) => match.team1Score !== 0 || match.team2Score !== 0
+					);
+					console.table(validMatches);
+					await addMatches(validMatches);
 				} catch (err) {
 					console.error('Error parsing CSV:', err);
 					error.set('Error parsing CSV');

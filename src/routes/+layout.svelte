@@ -3,13 +3,13 @@
 	import './styles.css';
 </script>
 
-<div class="app">
-	<Header />
+<Header />
 
-	<main class="content">
-		<slot />
-	</main>
-</div>
+<main class="content">
+	<slot />
+</main>
+
+<footer>&nbsp;</footer>
 
 <style>
 	.content {

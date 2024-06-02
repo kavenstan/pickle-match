@@ -2,8 +2,8 @@
 	import { onMount } from 'svelte';
 	import { page } from '$app/stores';
 	import Login from './Login.svelte';
-	import { showModal } from '$lib/store';
-	import { session } from '$lib/user';
+	import { showLoginModal } from '$lib/store';
+	import { userSession } from '$lib/user';
 	import { getAuth, signOut, type Auth } from 'firebase/auth';
 	import { app } from '$lib/firebase';
 	import Icon from './Icon.svelte';
@@ -16,12 +16,12 @@
 	});
 
 	const openModal = () => {
-		showModal.set(true);
+		showLoginModal.set(true);
 	};
 
 	const logOut = async () => {
 		const result = await signOut(auth);
-		session.update((curr) => {
+		userSession.update((curr) => {
 			return { ...curr, isLoading: false, user: null };
 		});
 	};
@@ -35,15 +35,18 @@
 
 <header>
 	<nav>
-		<a href="/"><Icon /><span>Pick It</span></a>
+		<a href="/"><Icon /><span>Pickt</span></a>
 		<ul>
 			<li aria-current={$page.url.pathname === '/ratings' ? 'page' : undefined}>
 				<a href="/ratings">Ratings</a>
 			</li>
+			<li aria-current={$page.url.pathname === '/results' ? 'page' : undefined}>
+				<a href="/results">Results</a>
+			</li>
 			<li aria-current={$page.url.pathname.startsWith('/matchmaking') ? 'page' : undefined}>
 				<a href="/matchmaking">Matchmaking</a>
 			</li>
-			{#if $session?.user}
+			{#if $userSession?.user}
 				<li aria-current={$page.url.pathname.startsWith('/upload') ? 'page' : undefined}>
 					<a href="/upload">Upload</a>
 				</li>
@@ -68,6 +71,7 @@
 <style>
 	header {
 		background-color: var(--primary-color);
+		padding: 0;
 	}
 	@media only screen and (max-width: 1026px) {
 		header > nav > a > span {

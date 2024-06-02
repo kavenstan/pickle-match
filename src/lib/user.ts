@@ -13,4 +13,4 @@ export type SessionState = {
 	loggedIn?: boolean;
 };
 
-export const session = <Writable<SessionState>>writable();
+export const userSession = <Writable<SessionState>>writable();

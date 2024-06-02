@@ -1,40 +1,46 @@
 import { playersPerCourt } from './consts';
 import { getPresets } from './preset';
-import type { Player, Round, Session, Config, Match } from './types';
-import { v4 as uuidv4 } from 'uuid';
+import type { Player, Session, Match } from '$lib/types';
+import { MatchmakingType } from '$lib/enums';
+import { newId } from '$lib/utils';
 
-export const createRound = (session: Session, allPlayers: Player[]): Round => {
+export const createRound = (session: Session, sessionMatches: Match[], allPlayers: Player[]): Match[] => {
+
+	if (session.config.matchmakingType === MatchmakingType.Manual) {
+		return [];
+	}
+
 	const sessionPlayers = allPlayers.filter((player) =>
-		session.config.players.some((playerName) => playerName === player.name)
+		session.state.activePlayers.some((playerName) => playerName === player.name)
 	);
 
-	const previousPairingSet = previousPairings(session.rounds);
+	const previousPairingSet = previousPairings(sessionMatches);
 
 	let [playingPlayers, sitOutPlayerNames] = splitGroupForSitOuts(sessionPlayers, session);
 
-	let matches = createMatches(playingPlayers, session.config, previousPairingSet);
+	let matches = createMatches(playingPlayers, session, previousPairingSet);
 
 	if (matches.length > 0) {
+		// TODO : Check this is saved
 		session.state.sitOutIndex =
 			(session.state.sitOutIndex + sitOutPlayerNames.length) % session.state.sitOutOrder.length;
-		return { id: uuidv4(), matches };
+		session.state.currentRound += 1;
+		return matches;
 	}
 
 	throw new Error('Failed to create a valid round within max iterations');
 };
 
-const previousPairings = (rounds: Round[]): Set<string> => {
-	let nameCombos = rounds.flatMap((round) =>
-		round.matches.flatMap((match) => {
-			return [match.team1.join(','), match.team2.join(',')];
-		})
-	);
+const previousPairings = (matches: Match[]): Set<string> => {
+	let nameCombos = matches.flatMap((match) => {
+		return [match.team1.join(','), match.team2.join(',')];
+	});
 	return new Set(nameCombos);
 };
 
 const splitGroupForSitOuts = (players: Player[], session: Session): [Player[], string[]] => {
 	const totalPlayers = players.length;
-	const courtCapacity = session.config.courtsAvailable * playersPerCourt;
+	const courtCapacity = session.config.courts * playersPerCourt;
 	const sitOutCount =
 		totalPlayers > courtCapacity ? totalPlayers - courtCapacity : totalPlayers % 4;
 
@@ -51,23 +57,23 @@ const splitGroupForSitOuts = (players: Player[], session: Session): [Player[], s
 
 const createMatches = (
 	players: Player[],
-	config: Config,
+	session: Session,
 	previousPairings: Set<string>
 ): Match[] => {
 	let matchPairings: Match[] = [];
 
-	switch (config.matchmakingAlgorithm) {
+	switch (session.config.matchmakingType) {
 		case 'Random':
-			matchPairings = randomMatchmaking(players, config);
+			matchPairings = randomMatchmaking(players, session);
 			break;
 		case 'RoundRobin':
-			matchPairings = roundRobinMatchmaking(players, config, previousPairings);
+			matchPairings = roundRobinMatchmaking(players, session, previousPairings);
 			break;
 		case 'Balanced':
-			matchPairings = balancedMatchmaking(players, config, previousPairings);
+			matchPairings = balancedMatchmaking(players, session, previousPairings);
 			break;
 		case 'Static':
-			matchPairings = staticMatchmaking(players, config);
+			matchPairings = staticMatchmaking(players, session);
 			break;
 		case 'Manual':
 			matchPairings = [];
@@ -79,9 +85,9 @@ const createMatches = (
 	return matchPairings;
 };
 
-const randomMatchmaking = (players: Player[], config: Config): Match[] => {
+const randomMatchmaking = (players: Player[], session: Session): Match[] => {
 	let iterations = 0;
-	while (iterations < config.maxIterations) {
+	while (iterations < session.config.maxIterations) {
 		const shuffledPlayers = [...players].sort(() => 0.5 - Math.random());
 		const matches: Match[] = [];
 
@@ -90,7 +96,7 @@ const randomMatchmaking = (players: Player[], config: Config): Match[] => {
 			const team2 = [shuffledPlayers[i + 2], shuffledPlayers[i + 3]];
 
 			if (isValidMatch(team1, team2, new Set<string>(), Infinity)) {
-				matches.push(createMatch(team1, team2));
+				matches.push(createMatch(team1, team2, session));
 			} else {
 				break;
 			}
@@ -107,11 +113,11 @@ const randomMatchmaking = (players: Player[], config: Config): Match[] => {
 
 const roundRobinMatchmaking = (
 	players: Player[],
-	config: Config,
+	session: Session,
 	previousPairings: Set<string>
 ): Match[] => {
 	let iterations = 0;
-	while (iterations < config.maxIterations) {
+	while (iterations < session.config.maxIterations) {
 		const shuffledPlayers = [...players].sort(() => 0.5 - Math.random());
 		const matches: Match[] = [];
 
@@ -120,7 +126,7 @@ const roundRobinMatchmaking = (
 			const team2 = [shuffledPlayers[i + 2], shuffledPlayers[i + 3]];
 
 			if (isValidMatch(team1, team2, previousPairings, Infinity)) {
-				matches.push(createMatch(team1, team2));
+				matches.push(createMatch(team1, team2, session));
 			} else {
 				break;
 			}
@@ -137,13 +143,13 @@ const roundRobinMatchmaking = (
 
 const balancedMatchmaking = (
 	players: Player[],
-	config: Config,
+	session: Session,
 	previousPairings: Set<string>
 ): Match[] => {
-	let currentRatingDiffLimit = config.ratingDiffLimit;
+	let currentRatingDiffLimit = session.config.ratingDiffLimit;
 
 	let iterations = 0;
-	while (iterations < config.maxIterations) {
+	while (iterations < session.config.maxIterations) {
 		const shuffledPlayers = [...players].sort(() => 0.5 - Math.random());
 		const matches: Match[] = [];
 
@@ -152,7 +158,7 @@ const balancedMatchmaking = (
 			const team2 = [shuffledPlayers[i + 2], shuffledPlayers[i + 3]];
 
 			if (isValidMatch(team1, team2, previousPairings, currentRatingDiffLimit)) {
-				matches.push(createMatch(team1, team2));
+				matches.push(createMatch(team1, team2, session));
 			} else {
 				break;
 			}
@@ -164,14 +170,14 @@ const balancedMatchmaking = (
 
 		iterations++;
 
-		if (iterations % Math.ceil(config.maxIterations / 10) === 0) {
+		if (iterations % Math.ceil(session.config.maxIterations / 10) === 0) {
 			currentRatingDiffLimit *= 1.1;
 		}
 	}
 	return [];
 };
 
-const staticMatchmaking = (players: Player[], config: Config): Match[] => {
+const staticMatchmaking = (players: Player[], session: Session): Match[] => {
 	// Sort players by rating
 	players.sort((a, b) => a.rating - b.rating);
 
@@ -189,7 +195,7 @@ const staticMatchmaking = (players: Player[], config: Config): Match[] => {
 			if (Array.isArray(match)) {
 				const team1 = [players[match[0] - 1]];
 				const team2 = [players[match[1] - 1]];
-				matches.push(createMatch(team1, team2));
+				matches.push(createMatch(team1, team2, session));
 			} else {
 				sitOuts.push(players[match - 1]);
 			}
@@ -240,9 +246,11 @@ const isValidMatch = (
 	return true;
 };
 
-const createMatch = (team1: Player[], team2: Player[]): Match => {
+const createMatch = (team1: Player[], team2: Player[], session: Session): Match => {
 	return {
-		id: uuidv4(),
+		id: newId(),
+		sessionId: session.id,
+		round: session.state.currentRound,
 		team1: team1.map((player) => player.name),
 		team2: team2.map((player) => player.name),
 		team1Score: 0,
@@ -250,15 +258,29 @@ const createMatch = (team1: Player[], team2: Player[]): Match => {
 	};
 };
 
-const addPlayer = async (session: Session, player: Player) => {
-	// TODO: Allow player to be removed and re-added?
-	// List of active players in the round as well as all players who have participated in a round
-	if (session.config.players.some((playerName) => playerName === player.name)) {
-		throw Error('Player already in session');
+// TODO : Check this
+const addPlayerToSession = async (session: Session, player: Player) => {
+	if (!session.state.allPlayers.some((playerName) => playerName === player.name)) {
+		session.state.allPlayers.push(player.name);
+	}
+	if (!session.state.activePlayers.some((playerName) => playerName === player.name)) {
+		session.state.activePlayers.push(player.name);
+		session.state.sitOutOrder.splice(session.state.sitOutIndex, 0, player.name);
+		session.state.sitOutIndex += 1;
+	}
+};
+
+// TODO : Implement this
+const removePlayerFromSession = async (session: Session, player: Player) => {
+	let activeIndex = session.state.activePlayers.findIndex((playerName) => playerName === player.name);
+	if (activeIndex >= 0) {
+		// splice
 	}
 
-	session.config.players.push(player.name);
+	let sitOutIndex = session.state.sitOutOrder.findIndex((playerName) => playerName === player.name);
+	if (sitOutIndex >= 0) {
+		// splice
+		// session.state.sitOutIndex
+	}
 
-	session.state.sitOutOrder.splice(session.state.sitOutIndex, 0, player.name);
-	session.state.sitOutIndex += 1;
 };
