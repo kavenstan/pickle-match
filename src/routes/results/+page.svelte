@@ -89,9 +89,9 @@
 			{/if}
 			{#if hasPermission($userSession, PERMISSION_SESSION_WRITE)}
 				<button on:click={async () => await setSessionActive(session)}>Set Active</button>
+				<!-- <button on:click={async () => await fixSession(session.id)}>Fix session</button> -->
 			{/if}
 			<button on:click={() => toggleDupr()}>DUPR</button>
-			<button on:click={async () => await fixSession(session.id)}>Fix session</button>
 			{#if showDupr}
 				<pre>{duprCsv($matchesStore[session.id].data, session.date)}</pre>
 			{/if}

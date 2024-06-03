@@ -64,7 +64,7 @@
 
 <div>Session Stats</div>
 
-<table>
+<table class="stats">
 	<thead>
 		<tr>
 			<th on:click={() => sortTable('name')}>Name</th>
@@ -96,4 +96,19 @@
 </table>
 
 <style>
+	.stats {
+		max-width: 600px;
+		margin: 0 -1rem;
+	}
+
+	@media only screen and (max-width: 600px) {
+		.stats {
+			width: calc(100% + 2rem);
+			margin: 0 -1rem;
+		}
+		.stats th,
+		.stats td {
+			padding: 0.25rem;
+		}
+	}
 </style>

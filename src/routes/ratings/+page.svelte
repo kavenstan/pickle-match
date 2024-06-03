@@ -23,7 +23,7 @@
 			<th scope="col">W</th>
 			<th scope="col">L</th>
 			<th scope="col">D</th>
-			<th scope="col" class="rating">Rating</th>
+			<th scope="col" class="rating">R</th>
 		</tr>
 	</thead>
 	<tbody>
@@ -64,6 +64,16 @@
 	}
 	.ratings {
 		max-width: 600px;
-		margin: auto;
+		margin: 0 -1rem;
+	}
+
+	@media only screen and (max-width: 600px) {
+		.ratings {
+			margin: 0 -1rem;
+		}
+		.ratings th,
+		.ratings td {
+			padding: 0.25rem;
+		}
 	}
 </style>
