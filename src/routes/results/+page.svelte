@@ -1,14 +1,18 @@
 <script lang="ts">
 	import type { Match, Session } from '$lib/types';
 	import { onMount } from 'svelte';
-	import { getSessions } from '$lib/session';
-	import { SessionStatus } from '$lib/enums';
-	import { formatDate } from '$lib/utils';
+	import { fixSession, getSessions, updateSession } from '$lib/session';
+	import { MatchmakingType, SessionStatus } from '$lib/enums';
+	import { formatTimestamp } from '$lib/utils';
 	import { get } from 'svelte/store';
 	import { matchesStore, fetchMatchesForSession } from '$lib/match';
 	import { Loader } from '$lib/components';
 	import Round from '../matchmaking/Round.svelte';
 	import type { Timestamp } from 'firebase/firestore';
+	import { PERMISSION_SESSION_WRITE, userSession, hasPermission } from '$lib/user';
+	import ViewMatch from '$lib/components/ViewMatch.svelte';
+	import EditMatch from '../matchmaking/EditMatch.svelte';
+	import SessionResultsStats from './SessionResultsStats.svelte';
 
 	let sessions: Session[] = [];
 	let showDupr: boolean = false;
@@ -31,7 +35,7 @@
 	function duprCsv(matches: Match[], timestamp: Timestamp): string {
 		let content = '';
 
-		let date = formatDate(timestamp);
+		let date = formatTimestamp(timestamp);
 
 		matches.forEach((match) => {
 			content += duprLine(match, date);
@@ -50,23 +54,49 @@
 	// Implement for DUPR csv
 	// function copyToClipBoard() {
 	// }
+
+	const setSessionActive = async (session: Session) => {
+		await updateSession({
+			id: session.id,
+			state: {
+				status: SessionStatus.Started
+			}
+		} as Partial<Session>);
+	};
 </script>
 
 <h1>Results</h1>
 <section id="accordions">
 	{#each sessions.filter((x) => x.state.status === SessionStatus.Completed) as session}
 		<details on:toggle={(event) => handleToggle(session.id, event)}>
-			<summary>{formatDate(session.date)}</summary>
+			<summary>{formatTimestamp(session.date, 'EEE MMM do')}</summary>
 			{#if $matchesStore[session.id]?.error}
 				<Loader name="Matches" />
 			{:else if $matchesStore[session.id]?.error}
 				<p class="error">{$matchesStore[session.id].error}</p>
 			{:else if $matchesStore[session.id] && $matchesStore[session.id]?.data}
-				<Round matches={$matchesStore[session.id].data} />
+				{#if session.config.matchmakingType === MatchmakingType.Manual}
+					{#each $matchesStore[session.id].data as match}
+						{#if session.state.status === SessionStatus.Completed}
+							<ViewMatch {match} />
+						{:else}
+							<EditMatch {match} />
+						{/if}
+					{/each}
+				{:else}
+					<Round matches={$matchesStore[session.id].data} />
+				{/if}
+			{/if}
+			{#if hasPermission($userSession, PERMISSION_SESSION_WRITE)}
+				<button on:click={async () => await setSessionActive(session)}>Set Active</button>
 			{/if}
 			<button on:click={() => toggleDupr()}>DUPR</button>
+			<button on:click={async () => await fixSession(session.id)}>Fix session</button>
 			{#if showDupr}
 				<pre>{duprCsv($matchesStore[session.id].data, session.date)}</pre>
+			{/if}
+			{#if session?.state?.matchStats}
+				<SessionResultsStats {session} />
 			{/if}
 		</details>
 	{/each}

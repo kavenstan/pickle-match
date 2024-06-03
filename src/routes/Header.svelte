@@ -3,7 +3,12 @@
 	import { page } from '$app/stores';
 	import Login from './Login.svelte';
 	import { showLoginModal } from '$lib/store';
-	import { userSession } from '$lib/user';
+	import {
+		PERMISSION_UPLOAD,
+		PERMISSION_SESSION_WRITE,
+		hasPermission,
+		userSession
+	} from '$lib/user';
 	import { getAuth, signOut, type Auth } from 'firebase/auth';
 	import { app } from '$lib/firebase';
 	import Icon from './Icon.svelte';
@@ -43,10 +48,12 @@
 			<li aria-current={$page.url.pathname === '/results' ? 'page' : undefined}>
 				<a href="/results">Results</a>
 			</li>
-			<li aria-current={$page.url.pathname.startsWith('/matchmaking') ? 'page' : undefined}>
-				<a href="/matchmaking">Matchmaking</a>
-			</li>
-			{#if $userSession?.user}
+			{#if hasPermission($userSession, PERMISSION_SESSION_WRITE)}
+				<li aria-current={$page.url.pathname.startsWith('/matchmaking') ? 'page' : undefined}>
+					<a href="/matchmaking">Matchmaking</a>
+				</li>
+			{/if}
+			{#if hasPermission($userSession, PERMISSION_UPLOAD)}
 				<li aria-current={$page.url.pathname.startsWith('/upload') ? 'page' : undefined}>
 					<a href="/upload">Upload</a>
 				</li>

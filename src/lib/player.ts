@@ -6,9 +6,10 @@ import {
   addDoc,
   writeBatch,
   doc,
-  where
+  where,
+  getDoc
 } from 'firebase/firestore';
-import type { Player } from './types';
+import type { Player, PlayerMatchStats } from './types';
 import { db } from '$lib/firebase';
 import type { RatingMap } from './elo';
 
@@ -38,7 +39,7 @@ export async function updateRatings(ratingMap: RatingMap) {
     batch.update(docRef, { rating: ratingMap[player.name] });
   });
 
-  // await batch.commit();
+  await batch.commit();
 }
 
 
@@ -70,3 +71,33 @@ export async function resetRatings() {
 
   // await batch.commit();
 }
+
+export const updatePlayerStats = async (playerStats: Record<string, PlayerMatchStats>) => {
+  const batch = writeBatch(db);
+
+  for (const playerId in playerStats) {
+    if (playerStats.hasOwnProperty(playerId)) {
+      const playerRef = doc(db, 'players', playerId);
+      const playerDoc = await getDoc(playerRef);
+
+      if (playerDoc.exists()) {
+        const updatedMatchStats = {
+          played: playerStats[playerId].played,
+          won: playerStats[playerId].won,
+          lost: playerStats[playerId].lost,
+          drawn: playerStats[playerId].drawn,
+          pointsFor: playerStats[playerId].pointsFor,
+          pointsAgainst: playerStats[playerId].pointsAgainst,
+        };
+
+        batch.update(playerRef, { matchStats: updatedMatchStats });
+      } else {
+        console.error(`Player with ID ${playerId} does not exist.`);
+      }
+    }
+  }
+
+  // Commit the batch operation
+  await batch.commit();
+  console.log('Player stats updated successfully.');
+};

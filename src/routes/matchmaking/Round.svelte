@@ -27,9 +27,9 @@
 			<div class="round-title">Round {round}</div>
 			{#each roundMatches as match}
 				{#if editable}
-					<ViewMatch {match} />
-				{:else}
 					<EditMatch {match} />
+				{:else}
+					<ViewMatch {match} />
 				{/if}
 			{/each}
 		</div>

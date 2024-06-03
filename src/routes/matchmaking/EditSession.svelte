@@ -2,7 +2,7 @@
 	import type { Match, Player, Session } from '$lib/types';
 	import { onMount } from 'svelte';
 	import { sessionStore, subscribeToSession, updateSession } from '$lib/session';
-	import { MatchmakingType } from '$lib/enums';
+	import { MatchmakingType, SessionStatus } from '$lib/enums';
 	import { newId } from '$lib/utils';
 	import Round from './Round.svelte';
 	import CreateMatch from './CreateMatch.svelte';
@@ -58,6 +58,15 @@
 		};
 		await addMatch(match);
 	};
+
+	const endSession = async () => {
+		await updateSession({
+			id: session!.id,
+			state: {
+				status: SessionStatus.Completed
+			}
+		} as Partial<Session>);
+	};
 </script>
 
 {#if session}
@@ -65,7 +74,6 @@
 		<p>No rounds found</p>
 	{:else if pendingMatches.length === 0}
 		<div class="rounds">
-			Rounds
 			<Round matches={sessionMatches} editable={true} />
 		</div>
 	{/if}
@@ -79,6 +87,7 @@
 		{/if}
 	{/if}
 	<button on:click={async () => startNewRound()}>Start New Round</button>
+	<button on:click={async () => endSession()}>End Session</button>
 {/if}
 
 <style>

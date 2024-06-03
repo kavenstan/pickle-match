@@ -71,6 +71,15 @@ export async function fetchMatchesForSession(sessionId: string): Promise<void> {
   }
 }
 
+export async function getMatchesForSession(sessionId: string): Promise<Match[]> {
+  const matchesCollectionRef = collection(db, collection_name);
+  const q = query(matchesCollectionRef, where('sessionId', '==', sessionId));
+  const querySnapshot = await getDocs(q);
+  const matches: Match[] = querySnapshot.docs.map(doc => (doc.data() as Match));
+  return matches;
+}
+
+
 export async function addMatch(match: Match) {
   console.log('Add match', match);
   const matchRef = doc(collection(db, collection_name), match.id);

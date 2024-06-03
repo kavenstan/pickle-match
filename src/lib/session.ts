@@ -14,6 +14,7 @@ import type { Session } from './types';
 import { db } from '$lib/firebase';
 import { SessionStatus } from './enums';
 import { writable } from 'svelte/store';
+import { getMatchesForSession } from './match';
 
 const collection_sessions = 'sessions';
 
@@ -52,8 +53,8 @@ export const subscribeToSession = (sessionId: string) => {
 //   });
 // };
 
-export async function getSession(session: Session): Promise<Session> {
-  const sessionRef = doc(db, collection_sessions, session.id!);
+export async function getSession(sessionId: string): Promise<Session> {
+  const sessionRef = doc(db, collection_sessions, sessionId);
   const sessionDoc = await getDoc(sessionRef);
   return { id: sessionDoc.id, ...sessionDoc.data() } as Session;
 }
@@ -122,6 +123,31 @@ export async function addSession(session: Session): Promise<void> {
 
 export async function updateSession(session: Partial<Session>): Promise<void> {
   // console.log('Update Session', session);
+  if (!session.id) {
+    throw Error("Session id required for update");
+  }
   const sessionRef = doc(db, collection_sessions, session.id!);
   await updateDoc(sessionRef, session);
+}
+
+export async function fixSession(sessionId: string) {
+  let session = await getSession(sessionId);
+  let matches = await getMatchesForSession(sessionId);
+
+  const playerSet = new Set<string>();
+
+  matches.forEach(match => {
+    match.team1.forEach(player => playerSet.add(player));
+    match.team2.forEach(player => playerSet.add(player));
+  });
+
+  let players = Array.from(playerSet);
+
+  session.state.activePlayers = players;
+  session.state.allPlayers = players;
+
+  await updateSession({
+    id: sessionId,
+    state: session.state
+  })
 }

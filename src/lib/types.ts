@@ -5,6 +5,16 @@ export interface Player {
 	id: string;
 	name: string;
 	rating: number;
+	matchStats: PlayerMatchStats;
+}
+
+export interface PlayerMatchStats {
+	played: number;
+	won: number;
+	lost: number;
+	drawn: number;
+	pointsFor: number;
+	pointsAgainst: number;
 }
 
 export interface Session {
@@ -29,12 +39,13 @@ export interface State {
 	allPlayers: string[];
 	sitOutOrder: string[];
 	sitOutIndex: number;
-	startRatings: PlayerRating[];
-	endRatings: PlayerRating[];
+	startRatings: Record<string, number>;
+	endRatings: Record<string, number>;
+	matchStats: Record<string, PlayerMatchStats>;
 }
 
 export interface PlayerRating {
-	playerId: string;
+	name: string;
 	rating: number;
 }
 

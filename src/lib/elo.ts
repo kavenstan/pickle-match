@@ -1,10 +1,11 @@
 import { getMatches } from "./match";
-import { getPlayers, updateRatings } from "./player";
-import { getSessions } from "./session"
-import type { Match } from "./types";
-import { formatDate } from "./utils";
+import { getPlayers, updateRatings, updatePlayerStats } from "./player";
+import { getSessions, updateSession } from "./session"
+import type { Match, PlayerMatchStats, Session, Player } from "./types";
+import { formatTimestamp } from "./utils";
 
 export const recalculateRatings = async () => {
+
   const sessions = (await getSessions()).reverse();
   console.log(`Loaded ${sessions.length} sessions`);
 
@@ -14,39 +15,147 @@ export const recalculateRatings = async () => {
   const players = await getPlayers();
   console.log(`Loaded ${players.length} players`);
 
+  const playerStats = initializePlayerStats(players);
+
+  const playerNameIdMap = players.reduce((acc, player) => {
+    acc[player.name] = player.id;
+    return acc;
+  }, {} as Record<string, string>);
+
   let ratingMap: RatingMap = {};
 
+  // Reset ratings
+  // TODO : Option to provide initial seeding values
   players.forEach(x => {
-    ratingMap[x.name] = x.rating
+    ratingMap[x.name] = 1200;
   })
 
-  console.table(ratingMap);
+  // console.table(ratingMap);
 
-  sessions.forEach(session => {
-    console.log(`Session ${formatDate(session.date)}`);
+  sessions.forEach(async (session) => {
+    console.log(`Session ${formatTimestamp(session.date)}`);
+    const startRatingMap = { ...ratingMap };
 
     let sessionMatches = matches.filter(x => x.sessionId === session.id)
-    console.log(`${sessionMatches} matches.`);
+    console.log(`${sessionMatches.length} matches.`);
 
     ratingMap = updateRatingsMap(sessionMatches, ratingMap, false);
-
-    console.table(ratingMap);
+    await updateSessionStats(session, sessionMatches, startRatingMap, ratingMap, playerStats, playerNameIdMap);
   });
 
+  await updatePlayerStats(playerStats);
+
+  console.table(ratingMap);
   await updateRatings(ratingMap);
 }
 
+// TODO : Variable K - higher when fewer matches played, gradually decreasing.. 1-3=50, 4-10=40, 11-30=30, 31-80=20, 81+=10
 const K = 32;
 
-function expectedScore(rating1: number, rating2: number) {
+const updateSessionStats = async (session: Session, matches: Match[], startRatings: RatingMap, endRatings: RatingMap, playerStats: Record<string, PlayerMatchStats>, playerNameIdMap: Record<string, string>) => {
+  const sessionPlayers = new Set<string>(session.state.activePlayers);
+  session.state.startRatings = ratingMapToPlayerRating(startRatings, sessionPlayers);
+  session.state.endRatings = ratingMapToPlayerRating(endRatings, sessionPlayers);
+
+  const sessionPlayerStats = extractPlayerStatistics(matches);
+  session.state.matchStats = sessionPlayerStats
+
+  mergeSessionIntoTotal(playerStats, sessionPlayerStats, playerNameIdMap);
+
+  await updateSession({
+    id: session.id,
+    state: session.state
+  });
+};
+
+const extractPlayerStatistics = (matches: Match[]): Record<string, PlayerMatchStats> => {
+  const stats: Record<string, PlayerMatchStats> = {};
+
+  matches.forEach(match => {
+    const isDrawn = match.team1Score === match.team2Score;
+    const team1Won = match.team1Score > match.team2Score;
+
+    match.team1.forEach(player => {
+      if (!stats[player]) stats[player] = initializePlayerMatchStats();
+      updateStats(stats[player], isDrawn ? 'drawn' : team1Won ? 'won' : 'lost', match.team1Score, match.team2Score);
+    });
+
+    match.team2.forEach(player => {
+      if (!stats[player]) stats[player] = initializePlayerMatchStats();
+      updateStats(stats[player], isDrawn ? 'drawn' : team1Won ? 'lost' : 'won', match.team2Score, match.team1Score);
+    });
+  });
+
+  return stats;
+}
+
+const mergeSessionIntoTotal = (
+  totalStats: Record<string, PlayerMatchStats>, sessionStats: Record<string, PlayerMatchStats>, playerNameIdMap: Record<string, string>) => {
+  for (const player in sessionStats) {
+    const playerId = playerNameIdMap[player];
+    if (sessionStats.hasOwnProperty(player)) {
+      totalStats[playerId].played += sessionStats[player].played;
+      totalStats[playerId].won += sessionStats[player].won;
+      totalStats[playerId].lost += sessionStats[player].lost;
+      totalStats[playerId].drawn += sessionStats[player].drawn;
+      totalStats[playerId].pointsFor += sessionStats[player].pointsFor;
+      totalStats[playerId].pointsAgainst += sessionStats[player].pointsAgainst;
+    }
+  }
+}
+
+const initializePlayerStats = (players: Player[]): Record<string, PlayerMatchStats> => {
+  const playerStats: Record<string, PlayerMatchStats> = {};
+
+  players.forEach(player => {
+    playerStats[player.id] = initializePlayerMatchStats()
+  })
+
+  return playerStats;
+}
+
+const initializePlayerMatchStats = (): PlayerMatchStats => {
+  return {
+    played: 0,
+    won: 0,
+    drawn: 0,
+    lost: 0,
+    pointsFor: 0,
+    pointsAgainst: 0
+  };
+}
+
+const updateStats = (playerStats: PlayerMatchStats, result: 'won' | 'lost' | 'drawn', pointsFor: number, pointsAgainst: number) => {
+  playerStats.played += 1;
+  if (result === 'won') playerStats.won += 1;
+  if (result === 'lost') playerStats.lost += 1;
+  if (result === 'drawn') playerStats.drawn += 1;
+  playerStats.pointsFor += pointsFor;
+  playerStats.pointsAgainst += pointsAgainst;
+}
+
+const expectedScore = (rating1: number, rating2: number) => {
   return 1 / (1 + 10 ** ((rating2 - rating1) / 400));
+}
+
+const ratingMapToPlayerRating = (ratingMap: RatingMap, sessionPlayers: Set<string>): Record<string, number> => {
+
+  const playerRatings: Record<string, number> = {};
+
+  for (const key in ratingMap) {
+    if (sessionPlayers.has(key)) {
+      playerRatings[key] = ratingMap[key];;
+    }
+  }
+
+  return playerRatings;
 }
 
 export interface RatingMap {
   [key: string]: number;
 }
 
-export function updateRatingsMap(matches: Match[], currentRatings: RatingMap, useScoreDifference = false) {
+export const updateRatingsMap = (matches: Match[], currentRatings: RatingMap, useScoreDifference = false) => {
   const updatedRatings = { ...currentRatings };
 
   const formattedResults = matches.map(match => ({
@@ -93,14 +202,14 @@ export function updateRatingsMap(matches: Match[], currentRatings: RatingMap, us
     [player1_team1, player2_team1].forEach(player => {
       const playerImpact = updatedRatings[player] / team1_rating;
       const ratingChange = Math.round(team1_rating_change * playerImpact);
-      console.log("Rating Change:", player, ratingChange);
+      // console.log("Rating Change:", player, ratingChange);
       updatedRatings[player] += ratingChange;
     });
 
     [player1_team2, player2_team2].forEach(player => {
       const playerImpact = updatedRatings[player] / team2_rating;
       const ratingChange = Math.round(team2_rating_change * playerImpact);
-      console.log("Rating Change:", player, ratingChange);
+      // console.log("Rating Change:", player, ratingChange);
       updatedRatings[player] += ratingChange;
     });
   });

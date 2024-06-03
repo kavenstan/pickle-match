@@ -9,7 +9,7 @@
 	} from 'firebase/auth';
 	import { app } from '$lib/firebase';
 	import { showLoginModal } from '$lib/store';
-	import { userSession } from '$lib/user';
+	import { fetchRole, userSession } from '$lib/user';
 
 	let auth: Auth;
 	let provider: GoogleAuthProvider;
@@ -26,10 +26,13 @@
 	onMount(() => {
 		auth = getAuth(app);
 		provider = new GoogleAuthProvider();
-		onAuthStateChanged(auth, (newUser) => {
-			// console.log('onAuthStateChanged', auth, newUser);
+		onAuthStateChanged(auth, async (firebaseUser) => {
+			if (firebaseUser) {
+				await fetchRole(firebaseUser.uid);
+			}
+
 			userSession.update((curr) => {
-				return { ...curr, isLoading: false, user: newUser };
+				return { ...curr, isLoading: false, user: firebaseUser };
 			});
 			modal?.close();
 		});

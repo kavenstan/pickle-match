@@ -88,7 +88,8 @@
 				sitOutIndex: 0,
 				sitOutOrder: sessionPlayers.sort(() => 0.5 - Math.random()),
 				startRatings: [],
-				endRatings: []
+				endRatings: [],
+				matchStats: []
 			},
 			date: Timestamp.fromDate(new Date()),
 			location: 'default'

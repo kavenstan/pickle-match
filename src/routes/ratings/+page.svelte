@@ -1,7 +1,7 @@
 <!-- src/routes/index.svelte -->
 <script lang="ts">
 	import { recalculateRatings } from '$lib/elo';
-	import { removeMatches } from '$lib/match';
+	import { PERMISSION_PLAYER_WRITE, userSession, hasPermission } from '$lib/user';
 	import { getPlayers } from '$lib/player';
 	import type { Player } from '$lib/types';
 	import { onMount } from 'svelte';
@@ -19,10 +19,10 @@
 		<tr>
 			<th scope="col" class="ranking">#</th>
 			<th scope="col">Name</th>
-			<!-- <th scope="col">P</th>
+			<th scope="col">P</th>
 			<th scope="col">W</th>
 			<th scope="col">L</th>
-			<th scope="col">D</th> -->
+			<th scope="col">D</th>
 			<th scope="col" class="rating">Rating</th>
 		</tr>
 	</thead>
@@ -31,10 +31,10 @@
 			<tr>
 				<td>{index + 1}</td>
 				<td><strong>{player.name}</strong></td>
-				<!-- <td></td>
-				<td></td>
-				<td></td>
-				<td></td> -->
+				<td>{player.matchStats?.played}</td>
+				<td>{player.matchStats?.won}</td>
+				<td>{player.matchStats?.lost}</td>
+				<td>{player.matchStats?.drawn}</td>
 				<td>{player.rating}</td>
 			</tr>
 		{/each}
@@ -42,7 +42,9 @@
 </table>
 
 <!-- <button on:click={async () => await resetRatings()}>Reset Ratings</button> -->
-<button on:click={async () => await recalculateRatings()}>Recalculate Ratings</button>
+{#if hasPermission($userSession, PERMISSION_PLAYER_WRITE)}
+	<button on:click={async () => await recalculateRatings()}>Recalculate Ratings</button>
+{/if}
 
 <!-- <button on:click={async () => await removeMatches()}>Remove Matches</button> -->
 
