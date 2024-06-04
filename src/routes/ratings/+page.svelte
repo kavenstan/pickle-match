@@ -35,7 +35,7 @@
 				<td>{player.matchStats?.won}</td>
 				<td>{player.matchStats?.lost}</td>
 				<td>{player.matchStats?.drawn}</td>
-				<td>{player.rating}</td>
+				<td class="rating">{player.rating}</td>
 			</tr>
 		{/each}
 	</tbody>
@@ -61,19 +61,9 @@
 	}
 	.rating {
 		width: 60px;
+		text-align: right;
 	}
 	.ratings {
 		max-width: 600px;
-		margin: 0 -1rem;
-	}
-
-	@media only screen and (max-width: 600px) {
-		.ratings {
-			margin: 0 -1rem;
-		}
-		.ratings th,
-		.ratings td {
-			padding: 0.25rem;
-		}
 	}
 </style>

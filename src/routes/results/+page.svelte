@@ -110,7 +110,7 @@
 
 <style>
 	#accordions {
-		max-width: 500px;
+		max-width: 600px;
 		margin: auto;
 	}
 </style>

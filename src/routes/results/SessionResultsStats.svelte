@@ -67,7 +67,7 @@
 <table class="stats">
 	<thead>
 		<tr>
-			<th on:click={() => sortTable('name')}>Name</th>
+			<th on:click={() => sortTable('name')} class="name">Name</th>
 			<th on:click={() => sortTable('played')}>P</th>
 			<th on:click={() => sortTable('won')}>W</th>
 			<th on:click={() => sortTable('lost')}>L</th>
@@ -75,7 +75,7 @@
 			<th on:click={() => sortTable('pointsFor')}>+</th>
 			<th on:click={() => sortTable('pointsAgainst')}>-</th>
 			<th on:click={() => sortTable('pointsDifference')}>PΔ</th>
-			<th on:click={() => sortTable('ratingChange')}>RΔ</th>
+			<th on:click={() => sortTable('ratingChange')} class="rating">RΔ</th>
 		</tr>
 	</thead>
 	<tbody>
@@ -89,7 +89,7 @@
 				<td>{stats.pointsFor}</td>
 				<td>{stats.pointsAgainst}</td>
 				<td>{stats.pointsDifference}</td>
-				<td>{stats.ratingChange}</td>
+				<td class="rating">{stats.ratingChange}</td>
 			</tr>
 		{/each}
 	</tbody>
@@ -98,17 +98,14 @@
 <style>
 	.stats {
 		max-width: 600px;
-		margin: 0 -1rem;
 	}
-
-	@media only screen and (max-width: 600px) {
-		.stats {
-			width: calc(100% + 2rem);
-			margin: 0 -1rem;
-		}
-		.stats th,
-		.stats td {
-			padding: 0.25rem;
-		}
+	.stats .rating {
+		text-align: right;
+	}
+	.stats th {
+		width: 30px;
+	}
+	.stats th.name {
+		/* width: 100%; */
 	}
 </style>
