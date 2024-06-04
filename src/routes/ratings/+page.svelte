@@ -53,9 +53,6 @@
 	th {
 		padding: 0.5rem;
 	}
-	table {
-		width: 400px;
-	}
 	.ranking {
 		width: 40px;
 	}

@@ -17,6 +17,9 @@ export const newId = (): string => {
 }
 
 export function formatTimestamp(timestamp: Timestamp, format: string = 'yyyy-MM-dd'): string {
-	const date = timestamp.toDate();
+	return formatDate(timestamp.toDate(), format);
+}
+
+export function formatDate(date: Date, format: string = 'yyyy-MM-dd'): string {
 	return dateFormat(date, format);
 }

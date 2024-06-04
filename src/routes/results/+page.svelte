@@ -26,6 +26,7 @@
 		if (target.open && !get(matchesStore)[sessionId]) {
 			fetchMatchesForSession(sessionId);
 		}
+		console.log(sessions[0].date);
 	}
 
 	function toggleDupr() {
@@ -69,7 +70,8 @@
 <section id="accordions">
 	{#each sessions.filter((x) => x.state.status === SessionStatus.Completed) as session}
 		<details on:toggle={(event) => handleToggle(session.id, event)}>
-			<summary>{formatTimestamp(session.date, 'EEE MMM do')}</summary>
+			<summary>{session.date}</summary>
+			<!-- <summary>{formatTimestamp(session.date, 'EEE MMM do')}</summary> -->
 			{#if $matchesStore[session.id]?.error}
 				<Loader name="Matches" />
 			{:else if $matchesStore[session.id]?.error}

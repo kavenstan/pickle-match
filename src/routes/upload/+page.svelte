@@ -3,33 +3,87 @@
 	import { collection, doc, writeBatch, setDoc, Timestamp } from 'firebase/firestore';
 	import { db } from '$lib/firebase';
 	import type { Session, Player, Match } from '$lib/types';
-	import { addSession } from '$lib/session';
+	import { addSession, getSession, getSessionsByDate } from '$lib/session';
 	import { addMatches } from '$lib/match';
-	import { newId } from '$lib/utils';
+	import { formatDate, newId } from '$lib/utils';
 	import { MatchmakingType, SessionStatus } from '$lib/enums';
 
-	const fileContent = writable<string | null>(null);
-	const isLoading = writable(false);
-	const error = writable<string | null>(null);
+	let file: File | null = null;
+	let fileName = '';
+	let fileSize = 0;
+	let fileType = '';
+	let fileContent = '';
 
-	let fileInput: HTMLInputElement;
+	let isValidCsv = false;
+	let isValidJson = false;
 
-	function handleFileUpload(event: Event) {
-		const target = event.target as HTMLInputElement;
-		if (target.files && target.files.length > 0) {
-			const file = target.files[0];
+	let isSaving = false;
+	let error: string | null = null;
+	let messageLog = '';
+
+	const addMessage = (newMessage: string) => {
+		messageLog = messageLog + `[${formatDate(new Date(), 'HH:mm:ss')}] ${newMessage}\n`;
+	};
+
+	addMessage('Waiting...');
+
+	const handleFileChange = (event: Event): void => {
+		const input = event.target as HTMLInputElement;
+		const selectedFile = input.files ? input.files[0] : null;
+
+		if (selectedFile) {
+			file = selectedFile;
+			fileName = file.name;
+			fileSize = file.size;
+			fileType = file.type;
+
 			const reader = new FileReader();
 			reader.onload = () => {
-				fileContent.set(reader.result as string);
-			};
-			reader.onerror = () => {
-				error.set('Error reading file');
+				fileContent = reader.result as string;
+				validateFileContent();
 			};
 			reader.readAsText(file);
+		} else {
+			reset();
 		}
-	}
+	};
 
-	function parseDuprCSV(content: string) {
+	const reset = (): void => {
+		file = null;
+		fileName = '';
+		fileSize = 0;
+		fileType = '';
+		isValidCsv = false;
+		isValidJson = false;
+	};
+
+	const validateFileContent = () => {
+		addMessage('Validating File Content');
+		if (fileType === 'text/csv') {
+			isValidCsv = true;
+		}
+		if (fileType === 'application/json') {
+			isValidJson = true;
+		}
+	};
+
+	const processFile = async () => {
+		if (fileType === 'text/csv') {
+			await processDuprCsv();
+		}
+		if (fileType === 'application/json') {
+			await processPlayerJson();
+		}
+	};
+
+	const processDuprCsv = async () => {
+		var duprMatches = parseDuprCsv(fileContent);
+		addMessage(`Found ${duprMatches.length} matches`);
+
+		await uploadMatches(duprMatches);
+	};
+
+	const parseDuprCsv = (content: string) => {
 		const rows = content.split('\n');
 
 		return rows.map((row) => {
@@ -45,11 +99,25 @@
 				score_team2: parseInt(columns[20], 10)
 			};
 		});
-	}
+	};
 
-	async function uploadPlayersToFirestore(players: Player[]) {
-		isLoading.set(true);
-		error.set(null);
+	const processPlayerJson = async () => {
+		try {
+			const jsonData = JSON.parse(fileContent);
+			const players = Object.entries(jsonData).map(
+				([name, rating]) => ({ name, rating }) as Player
+			);
+			addMessage(`Found ${players.length} players`);
+			await uploadPlayers(players);
+		} catch (err) {
+			error = `Error parsing JSON: ${err}`;
+			addMessage(error);
+		}
+	};
+
+	const uploadPlayers = async (players: Player[]) => {
+		isSaving = true;
+		error = null;
 
 		try {
 			const batch = writeBatch(db);
@@ -60,123 +128,147 @@
 			});
 
 			await batch.commit();
-			alert('Data successfully imported to Firestore');
+
+			addMessage('Player data successfully imported to Firestore');
 		} catch (err) {
-			console.error('Error uploading to Firestore:', err);
-			error.set('Error uploading to Firestore');
+			error = `Error uploading players: ${err}`;
+			addMessage(error);
 		} finally {
-			isLoading.set(false);
+			isSaving = false;
+		}
+	};
+
+	async function uploadMatches(duprMatches: DuprMatch[]) {
+		try {
+			const playerSet = new Set<string>();
+
+			duprMatches.forEach((match) => {
+				playerSet.add(match.player1_team1);
+				playerSet.add(match.player2_team1);
+				playerSet.add(match.player1_team2);
+				playerSet.add(match.player2_team2);
+			});
+
+			const players = Array.from(playerSet);
+
+			const courtCount = Math.floor(players.length / 4);
+
+			console.log(duprMatches[0]);
+			const session: Session = {
+				id: newId(),
+				date: Timestamp.fromDate(new Date(duprMatches[0].date)),
+				location: 'Midleton',
+				config: {
+					courts: courtCount,
+					matchmakingType: MatchmakingType.RoundRobin,
+					maxIterations: 0,
+					ratingDiffLimit: 0
+				},
+				state: {
+					status: SessionStatus.Completed,
+					activePlayers: players,
+					allPlayers: players,
+					currentRound: 0,
+					sitOutOrder: players,
+					sitOutIndex: 0,
+					startRatings: {},
+					endRatings: {},
+					matchStats: {}
+				}
+			};
+			console.log(session);
+
+			var existingSessions = await getSessionsByDate(session.date);
+			if (existingSessions.length > 0) {
+				throw Error('Existing session found on date');
+			}
+			await addSession(session);
+
+			const matches: Match[] = duprMatches.map((row: any, i) => {
+				let round = Math.floor(i / courtCount) + 1;
+				return {
+					id: newId(),
+					sessionId: session.id,
+					team1: [row.player1_team1, row.player2_team1],
+					team2: [row.player1_team2, row.player2_team2],
+					team1Score: row.score_team1,
+					team2Score: row.score_team2,
+					round
+				} as Match;
+			});
+
+			var validMatches = matches.filter(
+				(match) => match.team1Score !== 0 || match.team2Score !== 0
+			);
+			addMessage(`Found ${validMatches.length} valid matches`);
+			await addMatches(validMatches);
+		} catch (err) {
+			error = `Error parsing CSV: ${err}`;
+			addMessage(error);
 		}
 	}
 
-	function parseAndUploadUser() {
-		fileContent.subscribe((content) => {
-			if (content) {
-				try {
-					const jsonData = JSON.parse(content);
-					const players = Object.entries(jsonData).map(
-						([name, rating]) => ({ name, rating }) as Player
-					);
-					uploadPlayersToFirestore(players);
-				} catch (err) {
-					console.error('Error parsing JSON:', err);
-					error.set('Error parsing JSON');
-				}
-			}
-		});
-	}
-
-	// TODO : After initial upload, this seems to be called every time a new file is set
-	async function parseAndUploadSession() {
-		fileContent.subscribe(async (content) => {
-			if (content) {
-				try {
-					const csvData = parseDuprCSV(content);
-
-					const playerSet = new Set<string>();
-
-					csvData.forEach((row) => {
-						playerSet.add(row.player1_team1);
-						playerSet.add(row.player2_team1);
-						playerSet.add(row.player1_team2);
-						playerSet.add(row.player2_team2);
-					});
-
-					const players = Array.from(playerSet);
-
-					const courtCount = Math.floor(players.length / 4);
-
-					const session: Session = {
-						id: newId(),
-						date: Timestamp.fromDate(new Date(csvData[0].date)),
-						location: 'Midleton',
-						config: {
-							courts: courtCount,
-							matchmakingType: MatchmakingType.RoundRobin,
-							maxIterations: 0,
-							ratingDiffLimit: 0
-						},
-						state: {
-							status: SessionStatus.Completed,
-							activePlayers: players,
-							allPlayers: players,
-							currentRound: 0,
-							sitOutOrder: players,
-							sitOutIndex: 0,
-							startRatings: [],
-							endRatings: []
-						}
-					};
-					console.log(session);
-					const createdSession = await addSession(session);
-
-					const matches: Match[] = csvData.map((row: any, i) => {
-						let round = Math.floor(i / courtCount) + 1;
-						return {
-							id: newId(),
-							sessionId: session.id,
-							team1: [row.player1_team1, row.player2_team1],
-							team2: [row.player1_team2, row.player2_team2],
-							team1Score: row.score_team1,
-							team2Score: row.score_team2,
-							round
-						} as Match;
-					});
-
-					var validMatches = matches.filter(
-						(match) => match.team1Score !== 0 || match.team2Score !== 0
-					);
-					console.table(validMatches);
-					await addMatches(validMatches);
-				} catch (err) {
-					console.error('Error parsing CSV:', err);
-					error.set('Error parsing CSV');
-				}
-			}
-		});
+	interface DuprMatch {
+		date: string;
+		player1_team1: string;
+		player2_team1: string;
+		player1_team2: string;
+		player2_team2: string;
+		score_team1: number;
+		score_team2: number;
 	}
 </script>
 
-<main>
-	{#if $error}
-		<p style="color: red;">{$error}</p>
+<h1>Upload</h1>
+
+<div class="upload-section">
+	<p>Upload valid DUPR CSV or Player JSON</p>
+
+	<input type="file" accept=".csv,.json" on:change={handleFileChange} />
+
+	{#if fileName}
+		<div class="file-info">
+			<p>File Name: {fileName}</p>
+			<p>File Size: {fileSize} bytes</p>
+			<p>File Type: {fileType}</p>
+		</div>
 	{/if}
 
-	{#if $isLoading}
-		<p>Loading...</p>
+	{#if isValidCsv || isValidJson}
+		<p>Valid file found</p>
+		<button on:click={async () => await processFile()}>Process File</button>
 	{/if}
 
-	<h1>Upload Player File</h1>
+	{#if error}
+		<p style="color: red;">{error}</p>
+	{/if}
+
+	{#if isSaving}
+		<p>Saving...</p>
+	{/if}
+</div>
+
+<h3>Log</h3>
+<pre>{messageLog}</pre>
+
+<!-- <h1>Upload</h1>
+
+<div class="upload-section">
+	<h2>Upload Player File</h2>
 	<input type="file" accept=".json" bind:this={fileInput} on:change={handleFileUpload} />
 	<button on:click={parseAndUploadUser} disabled={$isLoading}>Upload</button>
+</div>
 
-	<h1>Upload DUPR File</h1>
+<div class="upload-section">
+	<h2>Upload DUPR File</h2>
 	<input type="file" accept=".csv" bind:this={fileInput} on:change={handleFileUpload} />
 	<button on:click={parseAndUploadSession} disabled={$isLoading}>Upload</button>
-</main>
+</div> -->
 
 <style>
-	main {
-		padding: 2rem;
+	.upload-section {
+		margin-bottom: 2rem;
+		padding-left: 0.5rem;
+		border-left: 2px solid var(--primary-color);
 	}
 </style>

@@ -3,6 +3,7 @@
 	import Navbar from './Navbar.svelte';
 	import { checkAuth } from '$lib/user';
 	import './styles.css';
+	import ScrollToTop from '$lib/components/ScrollToTop.svelte';
 
 	onMount(() => {
 		checkAuth();
@@ -15,15 +16,14 @@
 	<slot />
 </main>
 
+<ScrollToTop />
+
 <footer>&nbsp;</footer>
 
 <style>
-	main {
-		margin-left: 5rem;
-	}
 	.container {
-		/* max-width: 1200px; */
-		/* margin: 0 auto; */
+		max-width: 1200px;
+		margin: 0 auto;
 		padding: 1rem;
 	}
 	@media only screen and (max-width: 600px) {
@@ -33,5 +33,9 @@
 		.container {
 			padding: 0.5rem;
 		}
+	}
+
+	footer {
+		height: 5rem;
 	}
 </style>

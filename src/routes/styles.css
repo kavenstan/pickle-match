@@ -7,8 +7,8 @@
 }
 
 [data-theme='light'] {
-	--primary-color: #3498db;
-	--secondary-color: #006600;
+	--primary-color: #2c3e50;
+	--secondary-color: #0172ad;
 	--accent-color: #ffff00;
 }
 
@@ -61,19 +61,6 @@ body::-webkit-scrollbar-thumb {
 	background: var(--secondary-color);
 }
 
-nav .logo svg {
-	transform: rotate(0deg);
-	transition: var(--transition-speed);
-}
-nav:hover .logo svg {
-	transform: rotate(-90deg);
-}
-@media only screen and (min-width: 600px) {
-	nav:hover .logo svg {
-		margin-left: 11rem;
-	}
-}
-
 iconify-icon {
 	display: inline-block;
 	width: 1em;
@@ -85,10 +72,12 @@ iconify-icon {
 		margin: 0 -0.25rem 0 -0.25rem;
 		width: calc(100% + 0.5rem);
 	}
+
 	table th,
 	table td {
 		padding: 0.25rem;
 	}
+
 	main {
 		margin-bottom: 10rem;
 	}

@@ -8,7 +8,8 @@ import {
   doc,
   getDoc,
   setDoc,
-  onSnapshot
+  onSnapshot,
+  Timestamp
 } from 'firebase/firestore';
 import type { Session } from './types';
 import { db } from '$lib/firebase';
@@ -22,13 +23,6 @@ const collection_sessions = 'sessions';
 
 export const sessionStore = writable<Session | null>();
 
-// export const activeSessionStore = writable<{ loading: boolean, error: string | null, session: Session | null }>({
-//   loading: false,
-//   error: null,
-//   session: null
-// });
-// export const activeSessionStore = writable<Session | null>();
-
 // Firestore
 
 export const subscribeToSession = (sessionId: string) => {
@@ -38,20 +32,6 @@ export const subscribeToSession = (sessionId: string) => {
     sessionStore.set(doc.data() as Session);
   });
 };
-
-// export const subscribeToActiveSession = () => {
-//   console.log("subscribeToActiveSession");
-//   const sessionRef = collection(db, collection_sessions);
-//   const sessionQuery = query(sessionRef, where('state.status', '!=', SessionStatus.Completed));
-
-//   return onSnapshot(sessionQuery, (snapshot) => {
-//     const session: Session[] = snapshot.docs.map(doc => ({
-//       id: doc.id,
-//       ...doc.data()
-//     })) as Session[];
-//     activeSessionStore.set(session[0]);
-//   });
-// };
 
 export async function getSession(sessionId: string): Promise<Session> {
   const sessionRef = doc(db, collection_sessions, sessionId);
@@ -85,36 +65,13 @@ export async function getActiveSession(): Promise<Session | null> {
   return session;
 }
 
-// export async function fetchActiveSession(): Promise<void> {
-//   console.log("Fetch active session");
-//   activeSessionStore.update(_ => (
-//     { loading: true, error: null, session: null }
-//   ));
-
-//   try {
-//     const sessionsCollectionRef = collection(db, collection_sessions);
-//     const q = query(sessionsCollectionRef, where('state.status', '!=', SessionStatus.Completed));
-//     const querySnapshot = await getDocs(q);
-
-//     let session: Session | null = null;
-//     querySnapshot.forEach(doc => {
-//       const data = doc.data() as Session;
-//       if (data.state.status !== SessionStatus.Completed) {
-//         session = data;
-//         return;
-//       }
-//     });
-
-//     activeSessionStore.update(_ => (
-//       { loading: false, error: null, session }
-//     ));
-
-//   } catch (error: any) {
-//     activeSessionStore.update(_ => (
-//       { loading: false, error: error.message, session: null }
-//     ));
-//   }
-// }
+export async function getSessionsByDate(timestamp: Timestamp): Promise<Session[]> {
+  const sessionsCollectionRef = collection(db, collection_sessions);
+  const q = query(sessionsCollectionRef, where('date', '==', timestamp));
+  const querySnapshot = await getDocs(q);
+  console.log(querySnapshot.docs);
+  return querySnapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })) as Session[];
+}
 
 export async function addSession(session: Session): Promise<void> {
   const sessionRef = doc(collection(db, collection_sessions), session.id);
