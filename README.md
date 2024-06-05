@@ -23,7 +23,6 @@ You can preview the production build with `pnpm run preview`.
 ## TODO
 
 - UI
-  - Nav Menu on small screen
   - Login
   - Tables
 - UX
@@ -38,7 +37,11 @@ You can preview the production build with `pnpm run preview`.
   - User
     - Roles/Permissions
     - User management
+    - Server auth check
+    - Client auth check
   - Graph rating change over time per player
   - Save rating changes per match
+  - Caching
+    - Limit direct reads to firestore
 - Bugs
   - Player ids/names used interchangably

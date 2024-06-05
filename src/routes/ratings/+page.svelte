@@ -1,7 +1,5 @@
 <!-- src/routes/index.svelte -->
 <script lang="ts">
-	import { recalculateRatings } from '$lib/elo';
-	import { PERMISSION_PLAYER_WRITE, userSession, hasPermission } from '$lib/user';
 	import { getPlayers } from '$lib/player';
 	import type { Player } from '$lib/types';
 	import { onMount } from 'svelte';
@@ -17,50 +15,53 @@
 <table class="ratings">
 	<thead>
 		<tr>
-			<th scope="col" class="ranking">#</th>
-			<th scope="col">Name</th>
-			<th scope="col">P</th>
-			<th scope="col">W</th>
-			<th scope="col">L</th>
-			<th scope="col">D</th>
-			<th scope="col" class="rating">R</th>
+			<th class="index" scope="col">#</th>
+			<th class="name" scope="col">Name</th>
+			<th class="played" scope="col">P</th>
+			<th class="won" scope="col">W</th>
+			<th class="lost" scope="col">L</th>
+			<th class="drawn" scope="col">D</th>
+			<th class="rating" scope="col">Rating</th>
 		</tr>
 	</thead>
 	<tbody>
 		{#each players as player, index}
 			<tr>
-				<td>{index + 1}</td>
-				<td><strong>{player.name}</strong></td>
-				<td>{player.matchStats?.played}</td>
-				<td>{player.matchStats?.won}</td>
-				<td>{player.matchStats?.lost}</td>
-				<td>{player.matchStats?.drawn}</td>
-				<td class="rating">{player.rating}</td>
+				<td class="index">{index + 1}</td>
+				<td class="name"><strong>{player.name}</strong></td>
+				<td class="played">{player.matchStats?.played}</td>
+				<td class="won">{player.matchStats?.won}</td>
+				<td class="lost">{player.matchStats?.lost}</td>
+				<td class="drawn">{player.matchStats?.drawn}</td>
+				<td class="rating"><strong>{player.rating}</strong></td>
 			</tr>
 		{/each}
 	</tbody>
 </table>
-
-<!-- <button on:click={async () => await resetRatings()}>Reset Ratings</button> -->
-{#if hasPermission($userSession, PERMISSION_PLAYER_WRITE)}
-	<button on:click={async () => await recalculateRatings()}>Recalculate Ratings</button>
-{/if}
-
-<!-- <button on:click={async () => await removeMatches()}>Remove Matches</button> -->
 
 <style>
 	td,
 	th {
 		padding: 0.5rem;
 	}
-	.ranking {
+	.index {
 		width: 40px;
+	}
+	@media only screen and (max-width: 400px) {
+		.played,
+		.won,
+		.lost,
+		.drawn {
+			display: none;
+		}
 	}
 	.rating {
 		width: 60px;
 		text-align: right;
+		font-weight: bold;
 	}
 	.ratings {
+		margin: auto;
 		max-width: 600px;
 	}
 </style>

@@ -5,6 +5,7 @@
 	import './styles.css';
 	import ScrollToTop from '$lib/components/ScrollToTop.svelte';
 
+	// TODO: Only checked on initial render
 	onMount(() => {
 		checkAuth();
 	});

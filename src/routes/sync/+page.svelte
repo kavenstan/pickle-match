@@ -4,6 +4,8 @@
 	import { db } from '$lib/firebase';
 	import type { Session, Player, Match } from '$lib/types';
 	import { addSession, getSession, getSessionsByDate } from '$lib/session';
+	import { recalculateRatings } from '$lib/elo';
+	import { PERMISSION_PLAYER_WRITE, userSession, hasPermission } from '$lib/user';
 	import { addMatches } from '$lib/match';
 	import { formatDate, newId } from '$lib/utils';
 	import { MatchmakingType, SessionStatus } from '$lib/enums';
@@ -219,9 +221,10 @@
 	}
 </script>
 
-<h1>Upload</h1>
+<h1>Data Sync</h1>
 
-<div class="upload-section">
+<div class="sync-section">
+	<h2>Import</h2>
 	<p>Upload valid DUPR CSV or Player JSON</p>
 
 	<input type="file" accept=".csv,.json" on:change={handleFileChange} />
@@ -246,27 +249,35 @@
 	{#if isSaving}
 		<p>Saving...</p>
 	{/if}
+
+	<h3>Upload Log</h3>
+	<pre>{messageLog}</pre>
 </div>
 
-<h3>Log</h3>
-<pre>{messageLog}</pre>
+<hr />
 
-<!-- <h1>Upload</h1>
+<div class="sync-section">
+	<h2>Export</h2>
 
-<div class="upload-section">
-	<h2>Upload Player File</h2>
-	<input type="file" accept=".json" bind:this={fileInput} on:change={handleFileUpload} />
-	<button on:click={parseAndUploadUser} disabled={$isLoading}>Upload</button>
+	<button>[NYI] Players</button>
+	<br /><br />
+	<button>[NYI] Matches</button>
 </div>
 
-<div class="upload-section">
-	<h2>Upload DUPR File</h2>
-	<input type="file" accept=".csv" bind:this={fileInput} on:change={handleFileUpload} />
-	<button on:click={parseAndUploadSession} disabled={$isLoading}>Upload</button>
-</div> -->
+<hr />
+
+<div class="sync-section">
+	<h2>Functions</h2>
+	<!-- <button on:click={async () => await resetRatings()}>Reset Ratings</button> -->
+	{#if hasPermission($userSession, PERMISSION_PLAYER_WRITE)}
+		<button on:click={async () => await recalculateRatings()}>Recalculate Ratings</button>
+	{/if}
+
+	<!-- <button on:click={async () => await removeMatches()}>Remove Matches</button> -->
+</div>
 
 <style>
-	.upload-section {
+	.sync-section {
 		margin-bottom: 2rem;
 		padding-left: 0.5rem;
 		border-left: 2px solid var(--primary-color);

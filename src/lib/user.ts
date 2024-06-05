@@ -13,7 +13,7 @@ import { app } from '$lib/firebase';
 
 export const ROLE_ADMIN = 'admin';
 
-export const PERMISSION_UPLOAD = 'upload';
+export const PERMISSION_SYNC = 'sync';
 export const PERMISSION_SESSION_WRITE = 'session.write';
 export const PERMISSION_PLAYER_WRITE = 'player.write';
 
@@ -32,6 +32,11 @@ export type SessionState = {
 	loading?: boolean;
 	loggedIn?: boolean;
 };
+
+const restrictedRoutes = [
+	{ path: '/sync', permission: PERMISSION_SYNC },
+	{ path: '/matchmaking', permission: PERMISSION_SESSION_WRITE }
+];
 
 export const userSession = <Writable<SessionState>>writable();
 
@@ -99,4 +104,17 @@ export const hasPermission = (session: SessionState, permission: string): boolea
 		return true;
 	}
 	return false;
+};
+
+export const hasPagePermission = (session: SessionState, path: string): boolean => {
+	const restrictedRoute = restrictedRoutes.find((route) => path.startsWith(route.path));
+	if (!restrictedRoute) {
+		return true;
+	}
+
+	return hasPermission(session, restrictedRoute.permission);
+};
+
+export const isRestrictedPage = (path: string): boolean => {
+	return restrictedRoutes.some((route) => path.startsWith(route.path));
 };

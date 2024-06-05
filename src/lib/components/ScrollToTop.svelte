@@ -3,7 +3,8 @@
 	let isHidden = true;
 
 	function scrollToTop() {
-		document.body.scrollIntoView();
+		// document.body.scrollIntoView();
+		window.scrollTo({ top: 0, behavior: 'smooth' });
 	}
 
 	function scrollContainer() {
@@ -21,9 +22,7 @@
 
 <svelte:window on:scroll={handleOnScroll} />
 
-<button on:click={scrollToTop} class:isHidden
-	><iconify-icon icon="iconamoon:arrow-up-2-light" /></button
->
+<button on:click={scrollToTop} class:isHidden><iconify-icon icon="iconamoon:arrow-up-1" /></button>
 
 <style>
 	button {
@@ -31,15 +30,34 @@
 		transition:
 			opacity 0.5s,
 			visibility 0.5s;
+
 		position: fixed;
 		z-index: 99;
 		right: 20px;
-		user-select: none;
 		bottom: 20px;
-		color: var(--accent-color);
-		background-color: black;
+
+		height: 2.5rem;
+		width: 2.5rem;
+
+		user-select: none;
+		background-color: rgb(0 0 0 / 1);
+		color: #666666;
 		line-height: 0.5rem;
-		border-radius: 1rem;
+		border-radius: 1.25rem;
+		border: 0;
+		padding: 0;
+		margin: 0;
+	}
+
+	button:focus {
+		--pico-box-shadow: 0;
+	}
+
+	button iconify-icon {
+		font-size: 2rem;
+	}
+	button iconify-icon:hover {
+		color: var(--accent-color);
 	}
 
 	button.isHidden {
