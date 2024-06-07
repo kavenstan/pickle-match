@@ -62,6 +62,10 @@
 		showModal = true;
 		modalTeam = team;
 	};
+
+	const closeModal = () => {
+		showModal = false;
+	};
 </script>
 
 {#if playerMap}
@@ -100,9 +104,14 @@
 		</div>
 	</div>
 {/if}
-{#if showModal}
-	<ScoreModal {match} team={modalTeam} on:select={handleScoreSelect} />
-{/if}
+
+<ScoreModal
+	open={showModal}
+	close={closeModal}
+	{match}
+	team={modalTeam}
+	on:select={handleScoreSelect}
+/>
 
 <style>
 	.match {

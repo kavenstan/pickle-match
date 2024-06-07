@@ -10,7 +10,8 @@ import {
 	writeBatch,
 	updateDoc,
 	onSnapshot,
-	getDoc
+	getDoc,
+	deleteDoc
 } from 'firebase/firestore';
 import { db } from '../firebase';
 
@@ -33,6 +34,11 @@ export const subscribeToMatch = (matchId: string) => {
 		matchStore.set(doc.data() as Match);
 	});
 };
+
+export const removeMatch = async (matchId: string) => {
+	const matchRef = doc(collection(db, collection_name), matchId);
+	await deleteDoc(matchRef);
+}
 
 export const subscribeToMatches = (sessionId: string) => {
 	console.log('subscribeToMatches', sessionId);

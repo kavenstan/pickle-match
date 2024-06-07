@@ -4,7 +4,6 @@
 	import { db } from '$lib/firebase';
 	import type { Session, Player, Match, Seeding } from '$lib/types';
 	import { addSession, getSessionsByDate } from '$lib/stores/session';
-	import { recalculateRatings } from '$lib/elo';
 	import { PERMISSION_PLAYER_WRITE, userSession, hasPermission } from '$lib/user';
 	import { addMatches } from '$lib/stores/match';
 	import { formatDate, newId } from '$lib/utils';
@@ -148,22 +147,16 @@
 
 	async function uploadMatches(duprMatches: DuprMatch[]) {
 		try {
-			const playerNames = new Set<string>();
+			const playerIdSet = new Set<string>();
 
 			duprMatches.forEach((match) => {
-				playerNames.add(match.player1_team1);
-				playerNames.add(match.player2_team1);
-				playerNames.add(match.player1_team2);
-				playerNames.add(match.player2_team2);
+				playerIdSet.add(match.player1_team1);
+				playerIdSet.add(match.player2_team1);
+				playerIdSet.add(match.player1_team2);
+				playerIdSet.add(match.player2_team2);
 			});
 
-			const playerMapByName = Object.fromEntries(
-				Object.values(playerMap)
-					.filter((player) => playerNames.has(player.name))
-					.map((player) => [player.name, player])
-			);
-
-			const playerIds = Object.values(playerMapByName).map((player) => player.id);
+			const playerIds = [...playerIdSet];
 
 			const courtCount = Math.floor(playerIds.length / 4);
 
@@ -202,12 +195,11 @@
 				let round = Math.floor(i / courtCount) + 1;
 				console.log('Row', row);
 				console.log('Session', session);
-				console.log('playerMapByName', playerMapByName);
 				return {
 					id: newId(),
 					sessionId: session.id,
-					team1: [playerMapByName[row.player1_team1].id, playerMapByName[row.player2_team1].id],
-					team2: [playerMapByName[row.player1_team2].id, playerMapByName[row.player2_team2].id],
+					team1: [row.player1_team1, row.player2_team1],
+					team2: [row.player1_team2, row.player2_team2],
 					team1Score: row.score_team1,
 					team2Score: row.score_team2,
 					round
@@ -309,9 +301,9 @@
 	<div class="sync-section">
 		<h2>Functions</h2>
 		<!-- <button on:click={async () => await resetRatings()}>Reset Ratings</button> -->
-		{#if hasPermission($userSession, PERMISSION_PLAYER_WRITE)}
+		<!-- {#if hasPermission($userSession, PERMISSION_PLAYER_WRITE)}
 			<button on:click={async () => await recalculateRatings()}>Recalculate Ratings</button>
-		{/if}
+		{/if} -->
 
 		<!-- <button on:click={async () => await removeMatches()}>Remove Matches</button> -->
 	</div>

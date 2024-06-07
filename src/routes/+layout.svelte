@@ -9,7 +9,6 @@
 	onMount(async () => {
 		// TODO: Only checked on initial render
 		checkAuth();
-		console.log('Fetching players');
 		await fetchPlayers();
 	});
 </script>

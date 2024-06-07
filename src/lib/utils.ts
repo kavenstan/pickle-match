@@ -1,5 +1,5 @@
 import type { Timestamp } from 'firebase/firestore';
-import type { Player } from './types';
+import type { Match, Player } from './types';
 import { v4 } from 'uuid';
 import { format as dateFormat } from 'date-fns';
 import { playersStore } from '$lib/stores/player';
@@ -38,4 +38,8 @@ export function getPlayersSortedByName(): Player[] {
 export function getPlayersSortedByRating(): Player[] {
 	const playerMap = get(playersStore);
 	return Object.values(playerMap).sort((a, b) => b.rating - a.rating);
+}
+
+export function getMatchPlayerIds(match: Match): string[] {
+	return [...match.team1, ...match.team2];
 }

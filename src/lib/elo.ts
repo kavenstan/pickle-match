@@ -1,16 +1,15 @@
-import { getMatches } from './stores/match';
+import { getMatchesForSession } from './stores/match';
 import { getPlayers, updateRatings, updatePlayerStats } from './stores/player';
-import { getSessions, updateSession } from './stores/session';
+import { updateSession } from './stores/session';
 import type { Match, PlayerMatchStats, Session, Player } from './types';
 import { formatTimestamp } from './utils';
 
-export const recalculateRatings = async () => {
-	const sessions = (await getSessions()).reverse();
-	console.log(`Loaded ${sessions.length} sessions`);
+// export const recalculateRatings = async () => {
+// 	const sessions = (await getSessions()).reverse();
+// 	console.log(`Loaded ${sessions.length} sessions`);
+// }
 
-	const matches = await getMatches();
-	console.log(`Loaded ${matches.length} matches`);
-
+export const calculateSessionRatings = async (session: Session) => {
 	const players = await getPlayers();
 	console.log(`Loaded ${players.length} players`);
 
@@ -26,25 +25,23 @@ export const recalculateRatings = async () => {
 
 	// console.table(ratingMap);
 
-	for (const session of sessions) {
-		if (session.state.startRatings?.length > 0) {
-			console.log('Start ratings found - skipping');
-			continue;
-		}
-
-		console.log(`Session ${formatTimestamp(session.date)}`);
-		const startRatingMap = { ...ratingMap };
-
-		let sessionMatches = matches.filter((x) => x.sessionId === session.id);
-		console.log(`${sessionMatches.length} matches.`);
-
-		ratingMap = updateRatingsMap(sessionMatches, ratingMap, false);
-		await updateSessionStats(session, sessionMatches, startRatingMap, ratingMap, playerStats);
+	if (session.state.startRatings?.length > 0) {
+		console.log('Start ratings found - skipping');
+		return;
 	}
+
+	// console.log(`Session ${formatTimestamp(session.date)}`);
+	const startRatingMap = { ...ratingMap };
+
+	let sessionMatches = await getMatchesForSession(session.id);
+	// console.log(`Loaded ${sessionMatches.length} matches.`);
+
+	ratingMap = updateRatingsMap(sessionMatches, ratingMap, false);
+	await updateSessionStats(session, sessionMatches, startRatingMap, ratingMap, playerStats);
 
 	await updatePlayerStats(playerStats);
 
-	console.table(ratingMap);
+	// console.table(ratingMap);
 	await updateRatings(ratingMap);
 };
 
@@ -63,6 +60,7 @@ const updateSessionStats = async (
 	session.state.startRatings = Object.fromEntries(
 		Object.entries(startRatings).filter(([key]) => sessionPlayerIds.has(key))
 	);
+
 	session.state.endRatings = Object.fromEntries(
 		Object.entries(endRatings).filter(([key]) => sessionPlayerIds.has(key))
 	);

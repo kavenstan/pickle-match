@@ -1,7 +1,7 @@
 <script lang="ts">
 	import type { Match, Session } from '$lib/types';
 	import { onMount } from 'svelte';
-	import { getSessions, updateSession } from '$lib/stores/session';
+	import { fixSession, getSessions, updateSession } from '$lib/stores/session';
 	import { SessionStatus, ToastType } from '$lib/enums';
 	import { formatTimestamp } from '$lib/utils';
 	import { get } from 'svelte/store';
@@ -12,23 +12,22 @@
 	import SessionResultsStats from './SessionResultsStats.svelte';
 	import { goto } from '$app/navigation';
 	import { addToast } from '$lib/ui';
+	import { calculateSessionRatings } from '$lib/elo';
 
 	let sessions: Session[] = [];
-	let showDupr: boolean = false;
 
 	onMount(async () => {
 		sessions = await getSessions();
 	});
 
-	function handleToggle(sessionId: string, event: Event) {
+	const handleToggle = (sessionId: string, event: Event) => {
 		const target = event.target as HTMLDetailsElement;
 		if (target.open && !get(matchesStore)[sessionId]) {
 			fetchMatchesForSession(sessionId);
 		}
-		console.log(sessions[0].date);
-	}
+	};
 
-	function duprCsv(session: Session): string {
+	const duprCsv = (session: Session): string => {
 		console.log(`Get ${session.id} matches`);
 		let matches = get(matchesStore)[session.id].data;
 		let timestamp = session.date;
@@ -42,14 +41,14 @@
 		});
 
 		return content;
-	}
+	};
 
-	function duprLine(match: Match, date: string): string {
-		let line = `,,,,${date},${match.team1[0]},,,${match.team1[1]}`;
+	const duprLine = (match: Match, date: string): string => {
+		let line = `,,,,,${date},${match.team1[0]},,,${match.team1[1]}`;
 		line += `,,,${match.team2[0]},,,${match.team2[1]},,,,${match.team1Score},${match.team2Score}`;
 
 		return line + '\n';
-	}
+	};
 
 	const copyToClipboard = async (session: Session) => {
 		try {
@@ -82,12 +81,13 @@
 				<Loader name="Matches" />
 			{:else if $matchesStore[session.id]?.error}
 				<p class="error">{$matchesStore[session.id].error}</p>
-			{:else if $matchesStore[session.id] && $matchesStore[session.id]?.data}
+			{:else if $matchesStore[session.id]?.data}
 				<Round matches={$matchesStore[session.id].data} />
 			{/if}
 			{#if hasPermission($userSession, PERMISSION_SESSION_WRITE)}
 				<button on:click={async () => await setSessionActive(session)}>Set Active</button>
 				<!-- <button on:click={async () => await fixSession(session.id)}>Fix session</button> -->
+				<!-- <button on:click={async () => await calculateSessionRatings(session)}>Calculate ELO</button> -->
 			{/if}
 			<button on:click={() => copyToClipboard(session)}>DUPR</button>
 			{#if session?.state?.matchStats}

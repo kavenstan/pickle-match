@@ -1,21 +1,29 @@
 <script lang="ts">
-	import { matchStore, subscribeToMatch, updateMatchTeams } from '$lib/stores/match';
+	import {
+		matchStore,
+		removeMatch,
+		removeMatches,
+		subscribeToMatch,
+		updateMatchTeams
+	} from '$lib/stores/match';
 	import { playersStore } from '$lib/stores/player';
 	import type { Match, Player, Session } from '$lib/types';
+	import { getMatchPlayerIds } from '$lib/utils';
 	import { onMount } from 'svelte';
 	import { get } from 'svelte/store';
 
-	export let session: Session;
 	export let matchId: string;
+	export let availablePlayerIds: string[];
+	export let round: number;
 
 	let match: Match;
 	let playerMap: Record<string, Player>;
 
-	let activePlayerIds = session.state.activePlayerIds;
-	let availablePlayerIds: string[] = [];
+	let selectedPlayerIds: string[];
+
+	let sortedPlayers: Player[] = [];
 
 	onMount(() => {
-		console.log('Create Match : onMount');
 		const unsubscribe = subscribeToMatch(matchId);
 		const unsubscribeStore = matchStore.subscribe((data) => {
 			match = data as Match;
@@ -29,8 +37,14 @@
 		};
 	});
 
-	$: if (match) {
-		setAvailablePlayerIds(match);
+	$: if (match && playerMap && availablePlayerIds.length) {
+		// console.log(availablePlayerIds);
+		selectedPlayerIds = getMatchPlayerIds(match);
+		sortedPlayers = [];
+		for (const playerId of availablePlayerIds) {
+			sortedPlayers.push(playerMap[playerId]);
+		}
+		sortedPlayers.sort((a, b) => a.name.localeCompare(b.name));
 	}
 
 	const addPlayer = async (id: string) => {
@@ -57,46 +71,55 @@
 	};
 
 	const togglePlayer = async (id: string) => {
-		if (availablePlayerIds.some((x) => x === id)) {
-			await addPlayer(id);
-		} else {
+		if (selectedPlayerIds.some((x) => x === id)) {
 			await removePlayer(id);
+		} else {
+			await addPlayer(id);
 		}
-		await refresh(match);
+		await refresh();
 	};
 
-	const setAvailablePlayerIds = (match: Match) => {
-		availablePlayerIds = activePlayerIds.filter(
-			(id) => !match.team1?.some((x) => x === id) && !match.team2?.some((x) => x === id)
-		);
+	const refresh = async () => {
+		await updateMatchTeams(match);
 	};
 
-	const refresh = async (match: Match) => {
-		await updateMatchTeams(match).then((_) => setAvailablePlayerIds(match));
+	const cancel = async () => {
+		await removeMatch(match.id);
 	};
 </script>
 
 {#if match && playerMap}
+	<h3>Round {round}</h3>
+
 	<div>Select Players</div>
 
 	<div>
 		<div class="players">
-			{#each activePlayerIds as id}
+			{#each sortedPlayers as player}
 				<button
-					on:click={async () => togglePlayer(id)}
-					class="secondary pill {availablePlayerIds.includes(id) ? '' : 'outline'}"
-					>{playerMap[id].name}</button
+					on:click={async () => togglePlayer(player.id)}
+					class="secondary pill {selectedPlayerIds.includes(player.id) ? 'outline' : ''}"
+					>{player.name}</button
 				>
 			{/each}
 		</div>
-		{match.team1[0] ? playerMap[match.team1[0]].name : '?'},{match.team1[1]
-			? playerMap[match.team1[1]].name
-			: '?'}
-		vs
-		{match.team2[0] ? playerMap[match.team2[0]].name : '?'},{match.team2[1]
-			? playerMap[match.team2[1]].name
-			: '?'}
+		<div class="match">
+			<div class="team right">
+				<div>{playerMap[match.team1[0]]?.name ?? '[________]'}</div>
+				<div>{playerMap[match.team1[1]]?.name ?? '[________]'}</div>
+			</div>
+			<div class="score">
+				<div>00</div>
+				<div>00</div>
+			</div>
+			<div class="team">
+				<div>{playerMap[match.team2[0]]?.name ?? '[________]'}</div>
+				<div>{playerMap[match.team2[1]]?.name ?? '[________]'}</div>
+			</div>
+		</div>
 	</div>
+
+	<button on:click={cancel}>Cancel</button>
 {/if}
 
 <style>
@@ -105,5 +128,37 @@
 		gap: 0.5rem;
 		flex-wrap: wrap;
 		margin: 1rem 0;
+	}
+
+	.match {
+		display: flex;
+		border: 1px solid var(--primary-color);
+		padding: 0.5rem;
+		margin-bottom: 0.5rem;
+		gap: 0.5rem;
+	}
+	.score div {
+		font-family: monospace;
+		border-width: 2px;
+		border-style: solid;
+		border-radius: 8px;
+		padding: 5px;
+		line-height: 2rem;
+		font-size: 2rem;
+	}
+	.score {
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+		gap: 0.5rem;
+	}
+	.right {
+		text-align: right;
+	}
+	.team {
+		flex: 1;
+	}
+	.score div {
+		border-color: yellow;
 	}
 </style>

@@ -3,7 +3,7 @@
 	import { onMount } from 'svelte';
 	import { sessionStore, subscribeToSession, updateSession } from '$lib/stores/session';
 	import { MatchmakingType, SessionStatus, ToastType } from '$lib/enums';
-	import { newId } from '$lib/utils';
+	import { getMatchPlayerIds, newId } from '$lib/utils';
 	import Round from './Round.svelte';
 	import CreateMatch from './CreateMatch.svelte';
 	import { addMatch, subscribeToMatches, sessionMatchesStore } from '$lib/stores/match';
@@ -14,6 +14,7 @@
 	let session: Session | null;
 	let sessionMatches: Match[] | null;
 	let pendingMatches: Match[] = [];
+	let availablePlayerIds: string[];
 
 	onMount(() => {
 		const unsubscribeSession = subscribeToSession(sessionId);
@@ -65,6 +66,7 @@
 		await updateSession({
 			id: session!.id,
 			state: {
+				...session?.state,
 				status: SessionStatus.Completed
 			}
 		} as Partial<Session>).then((_) => {
@@ -72,28 +74,57 @@
 			goto('/results');
 		});
 	};
+
+	$: if (session && sessionMatches && sessionMatches.length > 0) {
+		let roundPlayerIds: Set<string> = new Set<string>();
+		sessionMatches
+			.filter(
+				(sm) =>
+					sm.round === session!.state.currentRound && sm.team1.length == 2 && sm.team2.length == 2
+			)
+			.forEach((match) => {
+				roundPlayerIds = new Set([...roundPlayerIds, ...getMatchPlayerIds(match)]);
+			});
+		availablePlayerIds = session!.state.activePlayerIds.filter((id) => !roundPlayerIds.has(id));
+	}
 </script>
 
 {#if session}
-	{#if !sessionMatches || sessionMatches.length === 0}
-		<p>No rounds found</p>
-	{:else if pendingMatches.length === 0}
-		<div class="rounds">
-			<Round matches={sessionMatches} editable={true} />
-		</div>
-	{/if}
-	{#if session.config.matchmakingType === MatchmakingType.Manual}
-		{#if pendingMatches.length === 0}
-			<button on:click={async () => await addManualMatch()}>Add Match</button>
-		{:else}
-			{#each pendingMatches as pendingMatch}
-				<CreateMatch matchId={pendingMatch.id} {session} />
-			{/each}
+	<div class="session">
+		{#if !sessionMatches || sessionMatches.length === 0}
+			<p>No rounds found</p>
+		{:else if pendingMatches.length === 0}
+			<div class="rounds">
+				<Round matches={sessionMatches} editable={true} currentRound={session.state.currentRound} />
+			</div>
 		{/if}
-	{/if}
-	<button on:click={async () => startNewRound()}>Start New Round</button>
-	<button on:click={async () => endSession()}>End Session</button>
+
+		{#if session.config.matchmakingType === MatchmakingType.Manual}
+			{#if pendingMatches.length === 0}
+				<button on:click={async () => await addManualMatch()}>Add Match</button>
+			{:else}
+				{#each pendingMatches as pendingMatch}
+					<CreateMatch
+						matchId={pendingMatch.id}
+						{availablePlayerIds}
+						round={session.state.currentRound}
+					/>
+				{/each}
+			{/if}
+		{/if}
+
+		{#if session.config.matchmakingType !== MatchmakingType.Manual || pendingMatches.length == 0}
+			<button on:click={async () => startNewRound()}
+				>Create Round {session.state.currentRound + 1}</button
+			>
+			<button on:click={async () => endSession()}>End Session</button>
+		{/if}
+	</div>
 {/if}
 
 <style>
+	.session {
+		max-width: 600px;
+		margin: auto;
+	}
 </style>
