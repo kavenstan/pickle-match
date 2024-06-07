@@ -1,11 +1,17 @@
 import type { Timestamp } from 'firebase/firestore';
-import type { MatchmakingType, SessionStatus } from './enums';
+import type { MatchmakingType, SessionStatus, ToastType } from './enums';
 
 export interface Player {
 	id: string;
 	name: string;
 	rating: number;
 	matchStats: PlayerMatchStats;
+}
+
+export interface Seeding {
+	id?: string;
+	name: string;
+	rating: number;
 }
 
 export interface PlayerMatchStats {
@@ -35,18 +41,13 @@ export interface Config {
 export interface State {
 	status: SessionStatus;
 	currentRound: number;
-	activePlayers: string[];
-	allPlayers: string[];
-	sitOutOrder: string[];
+	activePlayerIds: string[];
+	allPlayerIds: string[];
+	sitOutOrderPlayerIds: string[];
 	sitOutIndex: number;
 	startRatings: Record<string, number>;
 	endRatings: Record<string, number>;
 	matchStats: Record<string, PlayerMatchStats>;
-}
-
-export interface PlayerRating {
-	name: string;
-	rating: number;
 }
 
 export interface Match {
@@ -57,4 +58,12 @@ export interface Match {
 	team2: string[];
 	team1Score: number;
 	team2Score: number;
+}
+
+export interface Toast {
+	id?: string;
+	type?: ToastType;
+	message?: string;
+	dismissible?: boolean;
+	timeout?: number;
 }

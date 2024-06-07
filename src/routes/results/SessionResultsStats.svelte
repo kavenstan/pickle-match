@@ -1,26 +1,37 @@
 <script lang="ts">
-	import { derived, writable } from 'svelte/store';
-	import type { Session, PlayerMatchStats } from '$lib/types';
+	import { derived, get, writable } from 'svelte/store';
+	import type { Session, PlayerMatchStats, Player } from '$lib/types';
 	import { onMount } from 'svelte';
+	import { playersStore } from '$lib/stores/player';
 
 	export let session: Session;
 
 	interface ComputedPlayerStats extends PlayerMatchStats {
+		id: string;
 		name: string;
 		pointsDifference: number;
 		ratingChange: number;
 	}
 
+	let playerMap: Record<string, Player>;
+	onMount(() => {
+		playerMap = get(playersStore);
+	});
+
 	let sortedColumn: string = '';
 	let sortOrder: 'asc' | 'desc' = 'asc';
 
-	const computedStats = derived([writable(session)], ([$session]) => {
-		return Object.entries($session.state.matchStats).map(([name, stats]) => {
+	const computedStats = derived([writable(session), playersStore], ([$session, $playersStore]) => {
+		if (!playersStore) {
+			return [];
+		}
+		return Object.entries($session.state.matchStats).map(([id, stats]) => {
 			const pointsDifference = stats.pointsFor - stats.pointsAgainst;
-			const ratingChange = $session.state.endRatings[name] - $session.state.startRatings[name];
+			const ratingChange = $session.state.endRatings[id] - $session.state.startRatings[id];
 
 			return {
-				name,
+				id,
+				name: $playersStore[id]?.name || '...',
 				...stats,
 				pointsDifference,
 				ratingChange
@@ -54,10 +65,6 @@
 		sortedData.set(sorted);
 	}
 
-	onMount(() => {
-		sortTable('ratingChange');
-	});
-
 	// Initialize sorted data
 	$: sortedData.set([...$computedStats]);
 </script>
@@ -79,19 +86,21 @@
 		</tr>
 	</thead>
 	<tbody>
-		{#each $sortedData as stats}
-			<tr>
-				<td>{stats.name}</td>
-				<td>{stats.played}</td>
-				<td>{stats.won}</td>
-				<td>{stats.lost}</td>
-				<td>{stats.drawn}</td>
-				<td>{stats.pointsFor}</td>
-				<td>{stats.pointsAgainst}</td>
-				<td>{stats.pointsDifference}</td>
-				<td class="rating">{stats.ratingChange}</td>
-			</tr>
-		{/each}
+		{#if playerMap}
+			{#each $sortedData as stats}
+				<tr>
+					<td>{stats.name}</td>
+					<td>{stats.played}</td>
+					<td>{stats.won}</td>
+					<td>{stats.lost}</td>
+					<td>{stats.drawn}</td>
+					<td>{stats.pointsFor}</td>
+					<td>{stats.pointsAgainst}</td>
+					<td>{stats.pointsDifference}</td>
+					<td class="rating">{stats.ratingChange}</td>
+				</tr>
+			{/each}
+		{/if}
 	</tbody>
 </table>
 

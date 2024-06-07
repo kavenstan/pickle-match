@@ -1,13 +1,12 @@
-<!-- src/routes/index.svelte -->
 <script lang="ts">
-	import { getPlayers } from '$lib/player';
 	import type { Player } from '$lib/types';
+	import { getPlayersSortedByRating } from '$lib/utils';
 	import { onMount } from 'svelte';
 
 	let players: Player[] = [];
 
-	onMount(async () => {
-		players = await getPlayers();
+	onMount(() => {
+		players = getPlayersSortedByRating();
 	});
 </script>
 
@@ -25,17 +24,19 @@
 		</tr>
 	</thead>
 	<tbody>
-		{#each players as player, index}
-			<tr>
-				<td class="index">{index + 1}</td>
-				<td class="name"><strong>{player.name}</strong></td>
-				<td class="played">{player.matchStats?.played}</td>
-				<td class="won">{player.matchStats?.won}</td>
-				<td class="lost">{player.matchStats?.lost}</td>
-				<td class="drawn">{player.matchStats?.drawn}</td>
-				<td class="rating"><strong>{player.rating}</strong></td>
-			</tr>
-		{/each}
+		{#if players}
+			{#each players as player, index}
+				<tr>
+					<td class="index">{index + 1}</td>
+					<td class="name"><strong>{player.name}</strong></td>
+					<td class="played">{player.matchStats?.played}</td>
+					<td class="won">{player.matchStats?.won}</td>
+					<td class="lost">{player.matchStats?.lost}</td>
+					<td class="drawn">{player.matchStats?.drawn}</td>
+					<td class="rating"><strong>{player.rating}</strong></td>
+				</tr>
+			{/each}
+		{/if}
 	</tbody>
 </table>
 

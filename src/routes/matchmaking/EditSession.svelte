@@ -1,12 +1,14 @@
 <script lang="ts">
-	import type { Match, Player, Session } from '$lib/types';
+	import type { Match, Session } from '$lib/types';
 	import { onMount } from 'svelte';
-	import { sessionStore, subscribeToSession, updateSession } from '$lib/session';
-	import { MatchmakingType, SessionStatus } from '$lib/enums';
+	import { sessionStore, subscribeToSession, updateSession } from '$lib/stores/session';
+	import { MatchmakingType, SessionStatus, ToastType } from '$lib/enums';
 	import { newId } from '$lib/utils';
 	import Round from './Round.svelte';
 	import CreateMatch from './CreateMatch.svelte';
-	import { addMatch, subscribeToMatches, sessionMatchesStore } from '$lib/match';
+	import { addMatch, subscribeToMatches, sessionMatchesStore } from '$lib/stores/match';
+	import { goto } from '$app/navigation';
+	import { addToast } from '$lib/ui';
 
 	export let sessionId: string;
 	let session: Session | null;
@@ -65,7 +67,10 @@
 			state: {
 				status: SessionStatus.Completed
 			}
-		} as Partial<Session>);
+		} as Partial<Session>).then((_) => {
+			addToast({ message: 'Session Ended', type: ToastType.Success });
+			goto('/results');
+		});
 	};
 </script>
 

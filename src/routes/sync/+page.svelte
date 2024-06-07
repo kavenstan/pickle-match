@@ -1,14 +1,17 @@
 <script lang="ts">
-	import { writable } from 'svelte/store';
-	import { collection, doc, writeBatch, setDoc, Timestamp } from 'firebase/firestore';
+	import { get } from 'svelte/store';
+	import { collection, doc, writeBatch, Timestamp } from 'firebase/firestore';
 	import { db } from '$lib/firebase';
-	import type { Session, Player, Match } from '$lib/types';
-	import { addSession, getSession, getSessionsByDate } from '$lib/session';
+	import type { Session, Player, Match, Seeding } from '$lib/types';
+	import { addSession, getSessionsByDate } from '$lib/stores/session';
 	import { recalculateRatings } from '$lib/elo';
 	import { PERMISSION_PLAYER_WRITE, userSession, hasPermission } from '$lib/user';
-	import { addMatches } from '$lib/match';
+	import { addMatches } from '$lib/stores/match';
 	import { formatDate, newId } from '$lib/utils';
 	import { MatchmakingType, SessionStatus } from '$lib/enums';
+	import { playersStore } from '$lib/stores/player';
+	import { onMount } from 'svelte';
+	import { setSeedings } from '$lib/stores/seeding';
 
 	let file: File | null = null;
 	let fileName = '';
@@ -22,6 +25,12 @@
 	let isSaving = false;
 	let error: string | null = null;
 	let messageLog = '';
+
+	let playerMap: Record<string, Player>;
+
+	onMount(() => {
+		playerMap = get(playersStore);
+	});
 
 	const addMessage = (newMessage: string) => {
 		messageLog = messageLog + `[${formatDate(new Date(), 'HH:mm:ss')}] ${newMessage}\n`;
@@ -105,12 +114,9 @@
 
 	const processPlayerJson = async () => {
 		try {
-			const jsonData = JSON.parse(fileContent);
-			const players = Object.entries(jsonData).map(
-				([name, rating]) => ({ name, rating }) as Player
-			);
-			addMessage(`Found ${players.length} players`);
-			await uploadPlayers(players);
+			const seedings: Seeding[] = JSON.parse(fileContent);
+			addMessage(`Found ${seedings.length} seedings`);
+			await setSeedings(seedings);
 		} catch (err) {
 			error = `Error parsing JSON: ${err}`;
 			addMessage(error);
@@ -142,20 +148,26 @@
 
 	async function uploadMatches(duprMatches: DuprMatch[]) {
 		try {
-			const playerSet = new Set<string>();
+			const playerNames = new Set<string>();
 
 			duprMatches.forEach((match) => {
-				playerSet.add(match.player1_team1);
-				playerSet.add(match.player2_team1);
-				playerSet.add(match.player1_team2);
-				playerSet.add(match.player2_team2);
+				playerNames.add(match.player1_team1);
+				playerNames.add(match.player2_team1);
+				playerNames.add(match.player1_team2);
+				playerNames.add(match.player2_team2);
 			});
 
-			const players = Array.from(playerSet);
+			const playerMapByName = Object.fromEntries(
+				Object.values(playerMap)
+					.filter((player) => playerNames.has(player.name))
+					.map((player) => [player.name, player])
+			);
 
-			const courtCount = Math.floor(players.length / 4);
+			const playerIds = Object.values(playerMapByName).map((player) => player.id);
 
-			console.log(duprMatches[0]);
+			const courtCount = Math.floor(playerIds.length / 4);
+
+			// console.log(duprMatches[0]);
 			const session: Session = {
 				id: newId(),
 				date: Timestamp.fromDate(new Date(duprMatches[0].date)),
@@ -168,17 +180,17 @@
 				},
 				state: {
 					status: SessionStatus.Completed,
-					activePlayers: players,
-					allPlayers: players,
+					activePlayerIds: playerIds,
+					allPlayerIds: playerIds,
 					currentRound: 0,
-					sitOutOrder: players,
+					sitOutOrderPlayerIds: [],
 					sitOutIndex: 0,
 					startRatings: {},
 					endRatings: {},
 					matchStats: {}
 				}
 			};
-			console.log(session);
+			// console.log(session);
 
 			var existingSessions = await getSessionsByDate(session.date);
 			if (existingSessions.length > 0) {
@@ -188,11 +200,14 @@
 
 			const matches: Match[] = duprMatches.map((row: any, i) => {
 				let round = Math.floor(i / courtCount) + 1;
+				console.log('Row', row);
+				console.log('Session', session);
+				console.log('playerMapByName', playerMapByName);
 				return {
 					id: newId(),
 					sessionId: session.id,
-					team1: [row.player1_team1, row.player2_team1],
-					team2: [row.player1_team2, row.player2_team2],
+					team1: [playerMapByName[row.player1_team1].id, playerMapByName[row.player2_team1].id],
+					team2: [playerMapByName[row.player1_team2].id, playerMapByName[row.player2_team2].id],
 					team1Score: row.score_team1,
 					team2Score: row.score_team2,
 					round
@@ -210,6 +225,30 @@
 		}
 	}
 
+	const downloadJson = (fileName: string, content: any) => {
+		const json = JSON.stringify(content, null, 2);
+		const blob = new Blob([json], { type: 'application/json' });
+		const url = URL.createObjectURL(blob);
+		const a = document.createElement('a');
+		a.href = url;
+		a.download = fileName;
+		document.body.appendChild(a);
+		a.click();
+		document.body.removeChild(a);
+		URL.revokeObjectURL(url);
+	};
+
+	const downloadPlayers = async () => {
+		const content = Object.values(playerMap).map((x) => {
+			return {
+				id: x.id,
+				name: x.name,
+				rating: x.rating
+			};
+		});
+		downloadJson(`player_ratings_${formatDate(new Date())}.json`, content);
+	};
+
 	interface DuprMatch {
 		date: string;
 		player1_team1: string;
@@ -221,60 +260,62 @@
 	}
 </script>
 
-<h1>Data Sync</h1>
+{#if playerMap}
+	<h1>Data Sync</h1>
 
-<div class="sync-section">
-	<h2>Import</h2>
-	<p>Upload valid DUPR CSV or Player JSON</p>
+	<div class="sync-section">
+		<h2>Import</h2>
+		<p>Upload valid DUPR CSV or Player JSON</p>
 
-	<input type="file" accept=".csv,.json" on:change={handleFileChange} />
+		<input type="file" accept=".csv,.json" on:change={handleFileChange} />
 
-	{#if fileName}
-		<div class="file-info">
-			<p>File Name: {fileName}</p>
-			<p>File Size: {fileSize} bytes</p>
-			<p>File Type: {fileType}</p>
-		</div>
-	{/if}
+		{#if fileName}
+			<div class="file-info">
+				<p>File Name: {fileName}</p>
+				<p>File Size: {fileSize} bytes</p>
+				<p>File Type: {fileType}</p>
+			</div>
+		{/if}
 
-	{#if isValidCsv || isValidJson}
-		<p>Valid file found</p>
-		<button on:click={async () => await processFile()}>Process File</button>
-	{/if}
+		{#if isValidCsv || isValidJson}
+			<p>Valid file found</p>
+			<button on:click={async () => await processFile()}>Process File</button>
+		{/if}
 
-	{#if error}
-		<p style="color: red;">{error}</p>
-	{/if}
+		{#if error}
+			<p style="color: red;">{error}</p>
+		{/if}
 
-	{#if isSaving}
-		<p>Saving...</p>
-	{/if}
+		{#if isSaving}
+			<p>Saving...</p>
+		{/if}
 
-	<h3>Upload Log</h3>
-	<pre>{messageLog}</pre>
-</div>
+		<h3>Upload Log</h3>
+		<pre>{messageLog}</pre>
+	</div>
 
-<hr />
+	<hr />
 
-<div class="sync-section">
-	<h2>Export</h2>
+	<div class="sync-section">
+		<h2>Export</h2>
 
-	<button>[NYI] Players</button>
-	<br /><br />
-	<button>[NYI] Matches</button>
-</div>
+		<button on:click={() => downloadPlayers()}>Players</button>
+		<br /><br />
+		<button>[NYI] Matches</button>
+	</div>
 
-<hr />
+	<hr />
 
-<div class="sync-section">
-	<h2>Functions</h2>
-	<!-- <button on:click={async () => await resetRatings()}>Reset Ratings</button> -->
-	{#if hasPermission($userSession, PERMISSION_PLAYER_WRITE)}
-		<button on:click={async () => await recalculateRatings()}>Recalculate Ratings</button>
-	{/if}
+	<div class="sync-section">
+		<h2>Functions</h2>
+		<!-- <button on:click={async () => await resetRatings()}>Reset Ratings</button> -->
+		{#if hasPermission($userSession, PERMISSION_PLAYER_WRITE)}
+			<button on:click={async () => await recalculateRatings()}>Recalculate Ratings</button>
+		{/if}
 
-	<!-- <button on:click={async () => await removeMatches()}>Remove Matches</button> -->
-</div>
+		<!-- <button on:click={async () => await removeMatches()}>Remove Matches</button> -->
+	</div>
+{/if}
 
 <style>
 	.sync-section {
