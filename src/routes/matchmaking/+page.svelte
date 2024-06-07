@@ -1,7 +1,7 @@
 <script lang="ts">
-	import type { Player, Session } from '$lib/types';
+	import type { Session } from '$lib/types';
 	import { onMount } from 'svelte';
-	import { getActiveSession } from '$lib/session';
+	import { getActiveSession } from '$lib/stores/session';
 	import { PERMISSION_SESSION_WRITE, userSession, hasPermission } from '$lib/user';
 	import EditSession from './EditSession.svelte';
 	import SessionWizard from './SessionWizard.svelte';

@@ -1,21 +1,51 @@
 <script lang="ts">
-	import { updateMatchScore } from '$lib/match';
-	import type { Match } from '$lib/types';
+	import { updateMatchScore } from '$lib/stores/match';
+	import type { Match, Player } from '$lib/types';
+	import { get } from 'svelte/store';
+	import ScoreModal from './ScoreModal.svelte';
+	import { playersStore } from '$lib/stores/player';
+	import { onMount } from 'svelte';
+
+	type EditMode = 'text' | 'click';
 
 	export let match: Match;
+	export let editMode: EditMode = 'click';
+
+	let playerMap: Record<string, Player>;
+
+	let showModal = false;
+	let modalTeam = 1;
 
 	let team1Score = match.team1Score;
 	let team2Score = match.team2Score;
 
+	onMount(() => {
+		playerMap = get(playersStore);
+	});
+
 	const handleScoreChange = async () => {
-		const updatedMatch = { ...match, team1Score, team2Score };
+		if (team1Score === match.team1Score && team2Score === match.team2Score) {
+			return;
+		}
 
 		try {
+			const updatedMatch = { ...match, team1Score, team2Score };
 			await updateMatchScore(updatedMatch);
 			match = updatedMatch;
 		} catch (error) {
 			console.error(error);
 		}
+	};
+
+	const handleScoreSelect = async (event: CustomEvent<number>) => {
+		const score = event.detail;
+		if (modalTeam === 1) {
+			team1Score = score;
+		} else {
+			team2Score = score;
+		}
+
+		await handleScoreChange().then((_) => (showModal = false));
 	};
 
 	const scoreClass = (match: Match, team: number) => {
@@ -27,34 +57,61 @@
 			? 'win'
 			: 'loss';
 	};
+
+	const showScoreSelect = (team: number) => {
+		showModal = true;
+		modalTeam = team;
+	};
+
+	const closeModal = () => {
+		showModal = false;
+	};
 </script>
 
-{#if match}
+{#if playerMap}
 	<div class="match">
 		<div class="team right">
-			<div>{match.team1[0]}</div>
-			<div>{match.team1[1]}</div>
+			<div>{playerMap[match.team1[0]].name}</div>
+			<div>{playerMap[match.team1[1]].name}</div>
 		</div>
 		<div class="score">
-			<input
-				type="number"
-				class={scoreClass(match, 1)}
-				on:change={handleScoreChange}
-				bind:value={team1Score}
-			/>
-			<input
-				type="number"
-				class={scoreClass(match, 2)}
-				on:change={handleScoreChange}
-				bind:value={team2Score}
-			/>
+			{#if editMode === 'text'}
+				<input
+					type="number"
+					class={scoreClass(match, 1)}
+					on:change={handleScoreChange}
+					bind:value={team1Score}
+				/>
+				<input
+					type="number"
+					class={scoreClass(match, 2)}
+					on:change={handleScoreChange}
+					bind:value={team2Score}
+				/>
+			{/if}
+			{#if editMode === 'click'}
+				<button class={`${scoreClass(match, 1)}`} on:click={() => showScoreSelect(1)}
+					>{match.team1Score < 10 ? '0' : ''}{match.team1Score}</button
+				>
+				<button class={`${scoreClass(match, 2)}`} on:click={() => showScoreSelect(2)}>
+					{match.team2Score < 10 ? '0' : ''}{match.team2Score}
+				</button>
+			{/if}
 		</div>
 		<div class="team">
-			<div>{match.team2[0]}</div>
-			<div>{match.team2[1]}</div>
+			<div>{playerMap[match.team2[0]].name}</div>
+			<div>{playerMap[match.team2[1]].name}</div>
 		</div>
 	</div>
 {/if}
+
+<ScoreModal
+	open={showModal}
+	close={closeModal}
+	{match}
+	team={modalTeam}
+	on:select={handleScoreSelect}
+/>
 
 <style>
 	.match {
@@ -65,7 +122,7 @@
 		gap: 0.5rem;
 	}
 	.score input,
-	.score div {
+	.score button {
 		font-family: monospace;
 		border-width: 2px;
 		border-style: solid;
@@ -73,6 +130,7 @@
 		padding: 5px;
 		line-height: 2rem;
 		font-size: 2rem;
+		background-color: transparent;
 	}
 	.score input {
 		width: 3rem;

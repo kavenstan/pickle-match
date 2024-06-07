@@ -28,7 +28,6 @@ You can preview the production build with `pnpm run preview`.
 - UX
   - Matchmaking wizard
   - Creating manual matches
-  - Setting scores
 - Features
   - ELO calculation configuration
     - Higher K for newer players

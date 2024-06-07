@@ -5,6 +5,7 @@
 
 	export let matches: Match[] = [];
 	export let editable: boolean = false;
+	export let currentRound: number = 1;
 
 	const groupByRound = (matches: Match[]): [number, Match[]][] => {
 		const grouped = matches.reduce(
@@ -19,22 +20,33 @@
 			.map(([round, matches]) => [Number(round), matches] as [number, Match[]])
 			.sort((a, b) => a[0] - b[0]);
 	};
+
+	let groupedMatches: [number, Match[]][];
+
+	$: groupedMatches = groupByRound(matches);
 </script>
 
-<div class="round">
-	{#each groupByRound(matches) as [round, roundMatches] (round)}
-		<div>
-			<div class="round-title">Round {round}</div>
-			{#each roundMatches as match}
-				{#if editable}
-					<EditMatch {match} />
-				{:else}
-					<ViewMatch {match} />
-				{/if}
-			{/each}
-		</div>
-	{/each}
-</div>
+{#if groupedMatches}
+	<div class="round">
+		{#each groupedMatches as [round, roundMatches] (round)}
+			<div>
+				<div class="round-title">Round {round}</div>
+				{#each roundMatches as match}
+					{#if editable}
+						<EditMatch {match} />
+					{:else}
+						<ViewMatch {match} />
+					{/if}
+				{/each}
+			</div>
+		{/each}
+		{#if currentRound > groupedMatches.length}
+			<div>
+				<div class="round-title">Round {currentRound}</div>
+			</div>
+		{/if}
+	</div>
+{/if}
 
 <style>
 	.round {

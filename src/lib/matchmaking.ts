@@ -4,14 +4,17 @@ import type { Player, Session, Match } from '$lib/types';
 import { MatchmakingType } from '$lib/enums';
 import { newId } from '$lib/utils';
 
-export const createRound = (session: Session, sessionMatches: Match[], allPlayers: Player[]): Match[] => {
-
+export const createRound = (
+	session: Session,
+	sessionMatches: Match[],
+	allPlayers: Player[]
+): Match[] => {
 	if (session.config.matchmakingType === MatchmakingType.Manual) {
 		return [];
 	}
 
 	const sessionPlayers = allPlayers.filter((player) =>
-		session.state.activePlayers.some((playerName) => playerName === player.name)
+		session.state.activePlayerIds.some((playerId) => playerId === player.id)
 	);
 
 	const previousPairingSet = previousPairings(sessionMatches);
@@ -23,7 +26,8 @@ export const createRound = (session: Session, sessionMatches: Match[], allPlayer
 	if (matches.length > 0) {
 		// TODO : Check this is saved
 		session.state.sitOutIndex =
-			(session.state.sitOutIndex + sitOutPlayerNames.length) % session.state.sitOutOrder.length;
+			(session.state.sitOutIndex + sitOutPlayerNames.length) %
+			session.state.sitOutOrderPlayerIds.length;
 		session.state.currentRound += 1;
 		return matches;
 	}
@@ -32,10 +36,10 @@ export const createRound = (session: Session, sessionMatches: Match[], allPlayer
 };
 
 const previousPairings = (matches: Match[]): Set<string> => {
-	let nameCombos = matches.flatMap((match) => {
+	let playerIdCombos = matches.flatMap((match) => {
 		return [match.team1.join(','), match.team2.join(',')];
 	});
-	return new Set(nameCombos);
+	return new Set(playerIdCombos);
 };
 
 const splitGroupForSitOuts = (players: Player[], session: Session): [Player[], string[]] => {
@@ -44,15 +48,15 @@ const splitGroupForSitOuts = (players: Player[], session: Session): [Player[], s
 	const sitOutCount =
 		totalPlayers > courtCapacity ? totalPlayers - courtCapacity : totalPlayers % 4;
 
-	const sitOutPlayers: string[] = [];
+	const sitOutPlayerIds: string[] = [];
 	let currentIndex = session.state.sitOutIndex;
 	for (let i = 0; i < sitOutCount; i++) {
-		sitOutPlayers.push(session.state.sitOutOrder[currentIndex]);
-		currentIndex = (currentIndex + 1) % session.state.sitOutOrder.length;
+		sitOutPlayerIds.push(session.state.sitOutOrderPlayerIds[currentIndex]);
+		currentIndex = (currentIndex + 1) % session.state.sitOutOrderPlayerIds.length;
 	}
-	const playingPlayers = players.filter((player) => !sitOutPlayers.includes(player.name));
+	const playingPlayers = players.filter((player) => !sitOutPlayerIds.includes(player.id));
 
-	return [playingPlayers, sitOutPlayers];
+	return [playingPlayers, sitOutPlayerIds];
 };
 
 const createMatches = (
@@ -231,10 +235,10 @@ const isValidMatch = (
 	}
 
 	const pairings = [
-		`${player1.name}-${player2.name}`,
-		`${player2.name}-${player1.name}`,
-		`${player3.name}-${player4.name}`,
-		`${player4.name}-${player3.name}`
+		`${player1.id}-${player2.id}`,
+		`${player2.id}-${player1.id}`,
+		`${player3.id}-${player4.id}`,
+		`${player4.id}-${player3.id}`
 	];
 
 	for (const pairing of pairings) {
@@ -251,8 +255,8 @@ const createMatch = (team1: Player[], team2: Player[], session: Session): Match 
 		id: newId(),
 		sessionId: session.id,
 		round: session.state.currentRound,
-		team1: team1.map((player) => player.name),
-		team2: team2.map((player) => player.name),
+		team1: team1.map((player) => player.id),
+		team2: team2.map((player) => player.id),
 		team1Score: 0,
 		team2Score: 0
 	};
@@ -260,27 +264,28 @@ const createMatch = (team1: Player[], team2: Player[], session: Session): Match 
 
 // TODO : Check this
 const addPlayerToSession = async (session: Session, player: Player) => {
-	if (!session.state.allPlayers.some((playerName) => playerName === player.name)) {
-		session.state.allPlayers.push(player.name);
+	if (!session.state.allPlayerIds.some((playerId) => playerId === player.id)) {
+		session.state.allPlayerIds.push(player.id);
 	}
-	if (!session.state.activePlayers.some((playerName) => playerName === player.name)) {
-		session.state.activePlayers.push(player.name);
-		session.state.sitOutOrder.splice(session.state.sitOutIndex, 0, player.name);
+	if (!session.state.activePlayerIds.some((playerId) => playerId === player.id)) {
+		session.state.activePlayerIds.push(player.id);
+		session.state.sitOutOrderPlayerIds.splice(session.state.sitOutIndex, 0, player.id);
 		session.state.sitOutIndex += 1;
 	}
 };
 
 // TODO : Implement this
 const removePlayerFromSession = async (session: Session, player: Player) => {
-	let activeIndex = session.state.activePlayers.findIndex((playerName) => playerName === player.name);
+	let activeIndex = session.state.activePlayerIds.findIndex((playerId) => playerId === player.id);
 	if (activeIndex >= 0) {
 		// splice
 	}
 
-	let sitOutIndex = session.state.sitOutOrder.findIndex((playerName) => playerName === player.name);
+	let sitOutIndex = session.state.sitOutOrderPlayerIds.findIndex(
+		(playerId) => playerId === player.id
+	);
 	if (sitOutIndex >= 0) {
 		// splice
 		// session.state.sitOutIndex
 	}
-
 };

@@ -1,15 +1,17 @@
 <script lang="ts">
 	import type { Player, Session } from '$lib/types';
 	import { onMount } from 'svelte';
-	import { addSession } from '$lib/session';
-	import { getPlayers, addPlayer } from '$lib/player';
-	import { MatchmakingType, SessionStatus } from '$lib/enums';
-	import { newId } from '$lib/utils';
+	import { addSession } from '$lib/stores/session';
+	import { addPlayer, playersStore, fetchPlayers } from '$lib/stores/player';
+	import { MatchmakingType, SessionStatus, ToastType } from '$lib/enums';
+	import { mapPlayerNamesToRating, newId } from '$lib/utils';
 	import { Timestamp } from 'firebase/firestore';
+	import { goto } from '$app/navigation';
+	import { addToast } from '$lib/ui';
+	import { get } from 'svelte/store';
 
-	let session: Session | null;
+	let playerMap: Record<string, Player>;
 
-	let players: Player[] = [];
 	let selectedPlayerIds: string[] = [];
 
 	let newPlayerModal: HTMLDialogElement | null = null;
@@ -19,15 +21,27 @@
 
 	let newSessionError: string = '';
 
+	// Settings
 	let courts: number = 4;
-	let matchmakingAlgorithm: MatchmakingType = MatchmakingType.Random;
+	let matchmakingAlgorithm: MatchmakingType = MatchmakingType.Balanced;
+	let ratingDiffLimit = 100;
+	let maxIterations = 1000;
+	let staticOrder = '{}';
 
 	let step: number = 1;
 	const totalSteps = 3;
 
-	onMount(async () => {
-		players = await getPlayers();
+	onMount(() => {
+		playerMap = get(playersStore);
 	});
+
+	const sortPlayers = (sort: string = 'name') => {
+		let unsorted = Object.values(playerMap);
+		if (sort === 'rating') {
+			return unsorted.sort((a, b) => a.name.localeCompare(b.name));
+		}
+		return unsorted.sort((a, b) => a.name.localeCompare(b.name));
+	};
 
 	const togglePlayer = (player: Player) => {
 		if (selectedPlayerIds.includes(player.id)) {
@@ -38,22 +52,27 @@
 	};
 
 	const handleAddPlayer = async () => {
-		if (newPlayerName.trim() === '') {
+		newPlayerName = newPlayerName.trim();
+		if (newPlayerName === '') {
 			newPlayerError = 'Player name cannot be empty';
 			return;
 		}
-		if (players.some((p) => p.name === newPlayerName.trim())) {
+		if (newPlayerName in playerMap) {
 			newPlayerError = 'Player name already exists';
 			return;
 		}
 
 		try {
-			await addPlayer({ name: newPlayerName, rating: newPlayerRating } as Player).then((x) =>
-				newPlayerModal?.close()
+			await addPlayer({ name: newPlayerName, rating: newPlayerRating } as Player).then(
+				async (_) => {
+					newPlayerModal?.close();
+					await fetchPlayers();
+					playerMap = get(playersStore);
+					newPlayerName = '';
+					newPlayerError = '';
+					newPlayerRating = 1200;
+				}
 			);
-			players = await getPlayers();
-			newPlayerName = '';
-			newPlayerRating = 1200;
 		} catch (error) {
 			newPlayerError = 'Failed to add player';
 			console.error(error);
@@ -64,13 +83,17 @@
 		step = 1;
 		selectedPlayerIds = [];
 		courts = 4;
-		matchmakingAlgorithm = MatchmakingType.Random;
+		matchmakingAlgorithm = MatchmakingType.Balanced;
+	};
+
+	const refreshPreview = async () => {
+		addToast({ message: 'Not yet implemented' });
 	};
 
 	const startSession = async () => {
-		let sessionPlayers = players
-			.filter((player) => selectedPlayerIds.some((id) => id === player.id))
-			.map((player) => player.name);
+		let sessionPlayers = Object.values(playerMap).filter((player) =>
+			selectedPlayerIds.some((id) => id === player.id)
+		);
 
 		let newSession: Session = {
 			id: newId(),
@@ -81,23 +104,25 @@
 				maxIterations: 1000
 			},
 			state: {
-				activePlayers: sessionPlayers,
-				allPlayers: sessionPlayers,
+				activePlayerIds: selectedPlayerIds,
+				allPlayerIds: selectedPlayerIds,
 				status: SessionStatus.Created,
 				currentRound: 1,
 				sitOutIndex: 0,
-				sitOutOrder: sessionPlayers.sort(() => 0.5 - Math.random()),
-				startRatings: [],
-				endRatings: [],
-				matchStats: []
+				sitOutOrderPlayerIds: selectedPlayerIds.sort(() => 0.5 - Math.random()),
+				startRatings: mapPlayerNamesToRating(sessionPlayers),
+				endRatings: {},
+				matchStats: {}
 			},
 			date: Timestamp.fromDate(new Date()),
 			location: 'default'
 		};
 
 		try {
-			await addSession(newSession);
-			step = 3;
+			await addSession(newSession).then((_) => {
+				addToast({ message: 'Session Created', type: ToastType.Success });
+				goto('/matchmaking');
+			});
 		} catch (error) {
 			newSessionError = 'Failed to create session';
 			console.error(newSessionError);
@@ -105,66 +130,94 @@
 	};
 </script>
 
-<div class="wizard">
-	<div class="step-indicators">
-		{#each Array(totalSteps).fill(0) as _, i}
-			<div class="step-indicator {i < step ? 'active' : ''}"></div>
-		{/each}
-	</div>
-
-	{#if step === 1}
-		<div class="title">
-			<h3>Player Selection</h3>
-			<button on:click={() => newPlayerModal?.show()}>Add New Player</button>
-		</div>
-		{#if selectedPlayerIds.length < 4}
-			<div>Select at least 4 players</div>
-		{:else}
-			<div>&nbsp;</div>
-		{/if}
-		<div class="players">
-			{#each players.sort((a, b) => a.name.localeCompare(b.name)) as player}
-				<button
-					on:click={() => togglePlayer(player)}
-					class="secondary pill {selectedPlayerIds.includes(player.id) ? '' : 'outline'}"
-					>{player.name}</button
-				>
+{#if playerMap}
+	<div class="wizard">
+		<div class="step-indicators">
+			{#each Array(totalSteps).fill(0) as _, i}
+				<div class="step-indicator {i < step ? 'active' : ''}"></div>
 			{/each}
 		</div>
-		<div class="session-nav">
-			<button class="contrast outline" on:click={restartWizard}>Cancel</button>
-			<button disabled={selectedPlayerIds.length < 4} on:click={() => (step = 2)}>Next</button>
-		</div>
-	{/if}
 
-	{#if step === 2}
-		<h3>Configuration</h3>
-
-		<form>
-			<label for="courts">Courts</label>
-			<input type="text" id="courts" bind:value={courts} />
-			<label for="matchmaking">Matchmaking Algorithm</label>
-			<select id="matchmaking" bind:value={matchmakingAlgorithm}>
-				{#each Object.keys(MatchmakingType) as type}
-					<option value={type}>{type}</option>
+		{#if step === 1}
+			<div class="title">
+				<h3>Player Selection</h3>
+				<button on:click={() => newPlayerModal?.show()}>Add New Player</button>
+			</div>
+			<div class="instructions">
+				{#if selectedPlayerIds.length < 4}
+					<span>Select at least four players to begin</span>
+				{:else}
+					<span>{selectedPlayerIds.length} players selected</span>
+				{/if}
+			</div>
+			<div class="players">
+				{#each sortPlayers('name') as player}
+					<button
+						on:click={() => togglePlayer(player)}
+						class="secondary pill {selectedPlayerIds.includes(player.id) ? '' : 'outline'}"
+						>{player.name}</button
+					>
 				{/each}
-			</select>
-		</form>
+			</div>
+			<div class="session-nav">
+				<button class="contrast outline" on:click={restartWizard}>Reset</button>
+				<button disabled={selectedPlayerIds.length < 4} on:click={() => step++}>Next</button>
+			</div>
+		{/if}
 
-		<div class="session-nav">
-			<button class="outline" on:click={() => (step = 1)}>Back</button>
-			<button on:click={startSession}>Start!</button>
-			{#if newSessionError}
-				<p class="error">{newSessionError}</p>
-			{/if}
-		</div>
-	{/if}
+		{#if step === 2}
+			<h3>Settings</h3>
 
-	{#if step === 3}
-		<h3>Matchmaking</h3>
-		Figure this out
-	{/if}
-</div>
+			<form>
+				<label for="matchmaking">Matchmaking Type</label>
+				<select id="matchmaking" bind:value={matchmakingAlgorithm}>
+					{#each Object.keys(MatchmakingType) as type}
+						<option value={type}>{type}</option>
+					{/each}
+				</select>
+				<label for="courts">Courts</label>
+				<input type="text" id="courts" bind:value={courts} />
+				{#if matchmakingAlgorithm === MatchmakingType.Balanced}
+					<label for="ratingDiffLimit">Rating Range</label>
+					<input type="text" id="ratingDiffLimit" bind:value={ratingDiffLimit} />
+					<label for="maxIterations">Max Iterations</label>
+					<input type="text" id="maxIterations" bind:value={maxIterations} />
+				{/if}
+				{#if matchmakingAlgorithm === MatchmakingType.Static}
+					<label for="staticOrder">Matches (JSON)</label>
+					<textarea rows={10} id="staticOrder" bind:value={staticOrder} />
+				{/if}
+			</form>
+
+			<div class="session-nav">
+				<button class="outline" on:click={() => step--}>Back</button>
+				<button
+					on:click={() => {
+						step++;
+					}}>Next</button
+				>
+				{#if newSessionError}
+					<p class="error">{newSessionError}</p>
+				{/if}
+			</div>
+		{/if}
+
+		{#if step === 3}
+			<h3>Preview</h3>
+			<div class="session-preview"></div>
+			<div>
+				<button on:click={() => refreshPreview()}>Refresh</button>
+			</div>
+			<div class="session-nav">
+				<button class="outline" on:click={() => step--}>Back</button>
+				<button on:click={() => startSession()}>Start!</button>
+				{#if newSessionError}
+					<p class="error">{newSessionError}</p>
+				{/if}
+			</div>
+		{/if}
+	</div>
+{/if}
 
 <dialog bind:this={newPlayerModal}>
 	<article>
@@ -186,15 +239,19 @@
 </dialog>
 
 <style>
+	.wizard {
+		max-width: 600px;
+		margin: auto;
+	}
+
+	.instructions {
+		min-height: 3rem;
+	}
+
 	.step-indicators {
 		display: flex;
 		justify-content: center;
 		margin-bottom: 1rem;
-	}
-
-	.wizard {
-		max-width: 600px;
-		margin: auto;
 	}
 
 	.step-indicator {
@@ -217,6 +274,7 @@
 		gap: 0.5rem;
 		margin-bottom: 1rem;
 	}
+
 	.session-nav {
 		display: flex;
 		justify-content: space-between;

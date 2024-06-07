@@ -1,7 +1,16 @@
 <script lang="ts">
-	import type { Match } from '$lib/types';
+	import { playersStore } from '$lib/stores/player';
+	import type { Match, Player } from '$lib/types';
+	import { onMount } from 'svelte';
+	import { get } from 'svelte/store';
 
 	export let match: Match;
+
+	let playerMap: Record<string, Player>;
+
+	onMount(() => {
+		playerMap = get(playersStore);
+	});
 
 	const scoreClass = (match: Match, team: number) => {
 		if (match.team1Score === match.team2Score) {
@@ -14,11 +23,11 @@
 	};
 </script>
 
-{#if match}
+{#if match && playerMap}
 	<div class="match">
 		<div class="team right">
-			<div>{match.team1[0]}</div>
-			<div>{match.team1[1]}</div>
+			<div>{playerMap[match.team1[0]].name}</div>
+			<div>{playerMap[match.team1[1]].name}</div>
 		</div>
 		<div class="score">
 			<div class={scoreClass(match, 1)}>{match.team1Score < 10 ? '0' : ''}{match.team1Score}</div>
@@ -27,8 +36,8 @@
 			</div>
 		</div>
 		<div class="team">
-			<div>{match.team2[0]}</div>
-			<div>{match.team2[1]}</div>
+			<div>{playerMap[match.team2[0]].name}</div>
+			<div>{playerMap[match.team2[1]].name}</div>
 		</div>
 	</div>
 {/if}

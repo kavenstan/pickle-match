@@ -2,14 +2,18 @@
 	import { onMount } from 'svelte';
 	import Navbar from './Navbar.svelte';
 	import { checkAuth } from '$lib/user';
+	import { Toasts, ScrollToTop } from '$lib/components';
+	import { fetchPlayers } from '$lib/stores/player';
 	import './styles.css';
-	import ScrollToTop from '$lib/components/ScrollToTop.svelte';
 
-	// TODO: Only checked on initial render
-	onMount(() => {
+	onMount(async () => {
+		// TODO: Only checked on initial render
 		checkAuth();
+		await fetchPlayers();
 	});
 </script>
+
+<Toasts />
 
 <Navbar />
 
