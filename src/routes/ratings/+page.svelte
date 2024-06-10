@@ -4,9 +4,11 @@
 
 	let players: Player[] = [];
 
+	let minGamesPlayed = 3;
+
 	$: players = Object.values($playersStore)
 		.sort((a, b) => b.rating.rating - a.rating.rating)
-		.filter((p) => p.matchStats.played > 3);
+		.filter((p) => p.matchStats.played > minGamesPlayed);
 
 	const grade = (rating: number) => {
 		if (rating > 1450) {
@@ -21,6 +23,10 @@
 
 	const percentage = (decimal: number) => {
 		return (decimal * 100).toFixed(0) + '%';
+	};
+
+	const handleShowAll = () => {
+		minGamesPlayed = 0;
 	};
 </script>
 
@@ -59,6 +65,12 @@
 		{/each}
 	</tbody>
 </table>
+
+{#if minGamesPlayed > 0}
+	<div class="actions">
+		<button on:click={() => handleShowAll()}>Show All</button>
+	</div>
+{/if}
 
 <style>
 	td,
@@ -101,5 +113,11 @@
 	}
 	.bronze {
 		background-color: brown;
+	}
+	.actions {
+		margin-top: 1rem;
+		display: flex;
+		justify-content: center;
+		gap: 0.5rem;
 	}
 </style>
