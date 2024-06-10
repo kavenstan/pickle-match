@@ -46,6 +46,16 @@ export async function getSessions(): Promise<Session[]> {
 	return querySnapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })) as Session[];
 }
 
+export const getPlayerSessions = async (playerId: string) => {
+	const sessionsQuery = query(
+		collection(db, collection_name),
+		where('state.allPlayerIds', 'array-contains', playerId)
+	);
+	const querySnapshot = await getDocs(sessionsQuery);
+	const sessions = querySnapshot.docs.map((doc) => doc.data()) as Session[];
+	return sessions.sort((a, b) => a.date.toMillis() - b.date.toMillis());
+};
+
 export async function getActiveSession(): Promise<Session | null> {
 	// console.log("Get active session");
 
@@ -87,7 +97,10 @@ export async function updateSession(session: Partial<Session>): Promise<void> {
 	await updateDoc(sessionRef, session);
 }
 
-export const updateState = async (sessionId: string, stateUpdates: Partial<State>): Promise<void> => {
+export const updateState = async (
+	sessionId: string,
+	stateUpdates: Partial<State>
+): Promise<void> => {
 	const sessionDocRef = doc(db, collection_name, sessionId);
 	const updates: Record<string, any> = {};
 
@@ -103,8 +116,7 @@ export const updateState = async (sessionId: string, stateUpdates: Partial<State
 	} catch (error) {
 		console.error(`Error updating state for session ${sessionId}:`, error);
 	}
-}
-
+};
 
 export async function fixSession(sessionId: string) {
 	let session = await getSession(sessionId);
