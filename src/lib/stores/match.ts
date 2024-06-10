@@ -128,18 +128,8 @@ export async function updateMatchScore(match: Match): Promise<void> {
 	await updateDoc(matchRef, { team1Score: match.team1Score, team2Score: match.team2Score });
 }
 
-export async function removeMatches() {
-	const matchesRef = collection(db, collection_name);
-	//
-	//
-	const q = query(matchesRef, where('sessionId', '==', 'dfb921c6-d672-41a4-b1b8-56d911b5f2ce'));
-	const querySnapshot = await getDocs(q);
-
-	const batch = writeBatch(db);
-
-	querySnapshot.forEach((doc) => {
-		batch.delete(doc.ref);
-	});
-
-	// await batch.commit();
+export async function updateMatchRatings(matchId: string, ratingChanges: Record<string, number>): Promise<void> {
+	// console.log('Update match ratings', match);
+	const matchRef = doc(db, collection_name, matchId);
+	await updateDoc(matchRef, { ratingChanges });
 }

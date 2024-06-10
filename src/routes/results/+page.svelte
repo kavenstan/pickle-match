@@ -1,7 +1,7 @@
 <script lang="ts">
 	import type { Match, Session } from '$lib/types';
 	import { onMount } from 'svelte';
-	import { fixSession, getSessions, updateSession } from '$lib/stores/session';
+	import { getSessions, updateState } from '$lib/stores/session';
 	import { SessionStatus, ToastType } from '$lib/enums';
 	import { formatTimestamp } from '$lib/utils';
 	import { get } from 'svelte/store';
@@ -12,7 +12,8 @@
 	import SessionResultsStats from './SessionResultsStats.svelte';
 	import { goto } from '$app/navigation';
 	import { addToast } from '$lib/ui';
-	import { calculateSessionRatings } from '$lib/elo';
+	import { resetRatings, calculateRatings } from '$lib/rating';
+	import { calculateStats, resetStats } from '$lib/stats';
 
 	let sessions: Session[] = [];
 
@@ -60,12 +61,9 @@
 	};
 
 	const setSessionActive = async (session: Session) => {
-		await updateSession({
-			id: session.id,
-			state: {
-				status: SessionStatus.Started
-			}
-		} as Partial<Session>).then(() => {
+		await updateState(session.id, {
+			status: SessionStatus.Started
+		}).then(() => {
 			addToast({ message: 'Session Activated', type: ToastType.Success });
 			goto('/matchmaking');
 		});
@@ -86,10 +84,15 @@
 			{/if}
 			{#if hasPermission($userSession, PERMISSION_SESSION_WRITE)}
 				<button on:click={async () => await setSessionActive(session)}>Set Active</button>
+				<button on:click={() => copyToClipboard(session)}>DUPR</button>
+				<br />
+				<button on:click={async () => await resetRatings(session)}>Reset Ratings</button>
+				<button on:click={async () => await calculateRatings(session)}>Calcuate Ratings</button>
+				<br />
+				<button on:click={async () => await resetStats(session)}>Reset Stats</button>
+				<button on:click={async () => await calculateStats(session)}>Calculate Stats</button>
 				<!-- <button on:click={async () => await fixSession(session.id)}>Fix session</button> -->
-				<!-- <button on:click={async () => await calculateSessionRatings(session)}>Calculate ELO</button> -->
 			{/if}
-			<button on:click={() => copyToClipboard(session)}>DUPR</button>
 			{#if session?.state?.matchStats}
 				<SessionResultsStats {session} />
 			{/if}

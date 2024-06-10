@@ -3,6 +3,7 @@
 	import type { Match, Player } from '$lib/types';
 	import { onMount } from 'svelte';
 	import { get } from 'svelte/store';
+	import RatingPill from './RatingPill.svelte';
 
 	export let match: Match;
 
@@ -21,13 +22,25 @@
 			? 'win'
 			: 'loss';
 	};
+
+	let showRatingChanges = true;
 </script>
 
 {#if match && playerMap}
 	<div class="match">
 		<div class="team right">
-			<div>{playerMap[match.team1[0]].name}</div>
-			<div>{playerMap[match.team1[1]].name}</div>
+			<div class="player">
+				<div class="name">{playerMap[match.team1[0]].name}</div>
+				{#if showRatingChanges}
+					<RatingPill value={Math.round(match.ratingChanges?.[match.team1[0]])} />
+				{/if}
+			</div>
+			<div class="player">
+				{playerMap[match.team1[1]].name}
+				{#if showRatingChanges}
+					<RatingPill value={Math.round(match.ratingChanges?.[match.team1[1]])} />
+				{/if}
+			</div>
 		</div>
 		<div class="score">
 			<div class={scoreClass(match, 1)}>{match.team1Score < 10 ? '0' : ''}{match.team1Score}</div>
@@ -36,8 +49,18 @@
 			</div>
 		</div>
 		<div class="team">
-			<div>{playerMap[match.team2[0]].name}</div>
-			<div>{playerMap[match.team2[1]].name}</div>
+			<div class="player">
+				{#if showRatingChanges}
+					<RatingPill value={Math.round(match.ratingChanges?.[match.team2[0]])} />
+				{/if}
+				{playerMap[match.team2[0]].name}
+			</div>
+			<div class="player">
+				{#if showRatingChanges}
+					<RatingPill value={Math.round(match.ratingChanges?.[match.team2[1]])} />
+				{/if}
+				{playerMap[match.team2[1]].name}
+			</div>
 		</div>
 	</div>
 {/if}
@@ -71,6 +94,16 @@
 	.team {
 		flex: 1;
 	}
+
+	.player {
+		display: flex;
+		gap: 0.5rem;
+		align-items: center;
+	}
+	.right .player {
+		justify-content: flex-end;
+	}
+
 	.win {
 		border-color: green;
 	}

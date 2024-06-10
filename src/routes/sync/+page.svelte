@@ -8,9 +8,12 @@
 	import { addMatches } from '$lib/stores/match';
 	import { formatDate, newId } from '$lib/utils';
 	import { MatchmakingType, SessionStatus } from '$lib/enums';
-	import { playersStore } from '$lib/stores/player';
+	import { playersStore, resetAllPlayerStats } from '$lib/stores/player';
 	import { onMount } from 'svelte';
 	import { setSeedings } from '$lib/stores/seeding';
+	import { calculateAllRatings, copySeedings, resetAllRatings, simulate } from '$lib/rating';
+	import { resetAllStats, calculateAllStats } from '$lib/stats';
+	// import { simulate } from '$lib/elo';
 
 	let file: File | null = null;
 	let fileName = '';
@@ -300,12 +303,20 @@
 
 	<div class="sync-section">
 		<h2>Functions</h2>
-		<!-- <button on:click={async () => await resetRatings()}>Reset Ratings</button> -->
-		<!-- {#if hasPermission($userSession, PERMISSION_PLAYER_WRITE)}
-			<button on:click={async () => await recalculateRatings()}>Recalculate Ratings</button>
-		{/if} -->
+		{#if hasPermission($userSession, PERMISSION_PLAYER_WRITE)}
+			<button on:click={async () => await copySeedings()}>Copy Seedings</button>
+			<button on:click={async () => await resetAllRatings()}>Reset All Ratings</button>
+			<button on:click={async () => await calculateAllRatings()}>Calculate All Ratings</button>
+			<br />
+			<br />
+			<button on:click={async () => await resetAllPlayerStats()}>Reset All Player Stats</button>
+			<button on:click={async () => await resetAllStats()}>Reset All Stats</button>
+			<button on:click={async () => await calculateAllStats()}>Calculate All Stats</button>
+		{/if}
 
-		<!-- <button on:click={async () => await removeMatches()}>Remove Matches</button> -->
+		<br />
+		<br />
+		<button on:click={() => simulate()}>Simulate</button>
 	</div>
 {/if}
 

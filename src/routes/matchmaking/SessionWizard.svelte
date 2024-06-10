@@ -1,5 +1,5 @@
 <script lang="ts">
-	import type { Player, Session } from '$lib/types';
+	import type { Player, Session, Rating } from '$lib/types';
 	import { onMount } from 'svelte';
 	import { addSession } from '$lib/stores/session';
 	import { addPlayer, playersStore, fetchPlayers } from '$lib/stores/player';
@@ -16,7 +16,10 @@
 
 	let newPlayerModal: HTMLDialogElement | null = null;
 	let newPlayerName: string = '';
-	let newPlayerRating: number = 1200;
+	let newPlayerRating: Rating = {
+		rating: 1200,
+		rd: 350
+	};
 	let newPlayerError: string = '';
 
 	let newSessionError: string = '';
@@ -70,7 +73,7 @@
 					playerMap = get(playersStore);
 					newPlayerName = '';
 					newPlayerError = '';
-					newPlayerRating = 1200;
+					newPlayerRating = newPlayerRating;
 				}
 			);
 		} catch (error) {

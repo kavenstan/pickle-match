@@ -5,8 +5,8 @@
 	let players: Player[] = [];
 
 	$: players = Object.values($playersStore)
-		.sort((a, b) => b.rating - a.rating)
-		.filter((p) => p.matchStats.played > 1);
+		.sort((a, b) => b.rating.rating - a.rating.rating)
+		.filter((p) => p.matchStats.played > 3);
 
 	const grade = (rating: number) => {
 		if (rating > 1450) {
@@ -36,21 +36,25 @@
 			<th class="won" scope="col">W%</th>
 			<th class="lost" scope="col">L</th>
 			<th class="drawn" scope="col">D</th>
-			<!-- <th class="rating" scope="col">Rating</th> -->
+			<th class="rating" scope="col">Rating</th>
 		</tr>
 	</thead>
 	<tbody>
 		{#each players as player, index}
 			<tr>
-				<th class={`grade ${grade(player.rating)}`}></th>
+				<th class={`grade ${grade(player.rating.rating)}`}></th>
 				<td class="index">{index + 1}</td>
 				<td class="name"><strong>{player.name}</strong></td>
 				<td class="played">{player.matchStats?.played}</td>
 				<td class="won">{player.matchStats?.won}</td>
-				<td class="won">{percentage(player.matchStats?.won / player.matchStats?.played)}</td>
+				<td class="won"
+					>{player.matchStats?.played
+						? percentage(player.matchStats?.won / player.matchStats?.played)
+						: ''}</td
+				>
 				<td class="lost">{player.matchStats?.lost}</td>
 				<td class="drawn">{player.matchStats?.drawn}</td>
-				<!-- <td class="rating"><strong>{player.rating}</strong></td> -->
+				<td class="rating"><strong>{Math.round(player.rating.rating)}</strong></td>
 			</tr>
 		{/each}
 	</tbody>

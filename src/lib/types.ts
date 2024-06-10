@@ -4,14 +4,19 @@ import type { MatchmakingType, SessionStatus, ToastType } from './enums';
 export interface Player {
 	id: string;
 	name: string;
-	rating: number;
+	rating: Rating;
 	matchStats: PlayerMatchStats;
 }
 
 export interface Seeding {
 	id?: string;
 	name: string;
+	rating: Rating;
+}
+
+export interface Rating {
 	rating: number;
+	rd: number
 }
 
 export interface PlayerMatchStats {
@@ -45,8 +50,8 @@ export interface State {
 	allPlayerIds: string[];
 	sitOutOrderPlayerIds: string[];
 	sitOutIndex: number;
-	startRatings: Record<string, number>;
-	endRatings: Record<string, number>;
+	startRatings: Record<string, Rating>;
+	endRatings: Record<string, Rating>;
 	matchStats: Record<string, PlayerMatchStats>;
 }
 
@@ -58,6 +63,7 @@ export interface Match {
 	team2: string[];
 	team1Score: number;
 	team2Score: number;
+	ratingChanges: Record<string, number>;
 }
 
 export interface Toast {

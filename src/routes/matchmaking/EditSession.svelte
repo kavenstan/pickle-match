@@ -1,7 +1,7 @@
 <script lang="ts">
 	import type { Match, Session } from '$lib/types';
 	import { onMount } from 'svelte';
-	import { sessionStore, subscribeToSession, updateSession } from '$lib/stores/session';
+	import { sessionStore, subscribeToSession, updateState } from '$lib/stores/session';
 	import { MatchmakingType, SessionStatus, ToastType } from '$lib/enums';
 	import { getMatchPlayerIds, newId } from '$lib/utils';
 	import Round from './Round.svelte';
@@ -39,12 +39,8 @@
 	const startNewRound = async () => {
 		if (session) {
 			session.state.currentRound++;
-			await updateSession({
-				id: session.id,
-				state: {
-					...session.state,
-					currentRound: session.state.currentRound++
-				}
+			await updateState(session.id, {
+				currentRound: session.state.currentRound++
 			});
 		}
 	};
@@ -57,19 +53,16 @@
 			team1: [],
 			team2: [],
 			team1Score: 0,
-			team2Score: 0
+			team2Score: 0,
+			ratingChanges: {}
 		};
 		await addMatch(match);
 	};
 
 	const endSession = async () => {
-		await updateSession({
-			id: session!.id,
-			state: {
-				...session?.state,
-				status: SessionStatus.Completed
-			}
-		} as Partial<Session>).then((_) => {
+		await updateState(session!.id, {
+			status: SessionStatus.Completed
+		}).then((_) => {
 			addToast({ message: 'Session Ended', type: ToastType.Success });
 			goto('/results');
 		});

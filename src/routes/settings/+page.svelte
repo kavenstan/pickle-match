@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { simulate } from '$lib/rating';
 	import { signInPopUp, signOut } from '$lib/user';
 	import { userSession } from '$lib/user';
 
@@ -28,6 +29,8 @@
 	<h2>UI</h2>
 	<button on:click={toggleTheme}>Toggle Theme</button>
 </div>
+
+<button on:click={() => simulate()}>Simulate</button>
 
 <style>
 	.setting-section {

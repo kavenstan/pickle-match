@@ -1,13 +1,7 @@
 <script lang="ts">
-	import {
-		matchStore,
-		removeMatch,
-		removeMatches,
-		subscribeToMatch,
-		updateMatchTeams
-	} from '$lib/stores/match';
+	import { matchStore, removeMatch, subscribeToMatch, updateMatchTeams } from '$lib/stores/match';
 	import { playersStore } from '$lib/stores/player';
-	import type { Match, Player, Session } from '$lib/types';
+	import type { Match, Player } from '$lib/types';
 	import { getMatchPlayerIds } from '$lib/utils';
 	import { onMount } from 'svelte';
 	import { get } from 'svelte/store';
