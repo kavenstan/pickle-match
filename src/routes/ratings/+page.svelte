@@ -4,11 +4,11 @@
 
 	let players: Player[] = [];
 
-	let minGames = 3;
+	let minGamesPlayed = 3;
 
 	$: players = Object.values($playersStore)
 		.sort((a, b) => b.rating.rating - a.rating.rating)
-		.filter((p) => p.matchStats.played > minGames);
+		.filter((p) => p.matchStats.played > minGamesPlayed);
 
 	const grade = (rating: number) => {
 		if (rating > 1450) {
@@ -26,7 +26,7 @@
 	};
 
 	const handleShowAll = () => {
-		minGames = 0;
+		minGamesPlayed = 0;
 	};
 </script>
 
@@ -66,7 +66,7 @@
 	</tbody>
 </table>
 
-{#if minGames > 0}
+{#if minGamesPlayed > 0}
 	<div class="actions">
 		<button on:click={() => handleShowAll()}>Show All</button>
 	</div>
