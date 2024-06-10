@@ -27,11 +27,13 @@
 		}
 		return Object.entries($session.state.matchStats).map(([id, stats]) => {
 			const pointsDifference = stats.pointsFor - stats.pointsAgainst;
-			const ratingChange = $session.state.endRatings[id] - $session.state.startRatings[id];
+			const ratingChange =
+				($session.state.endRatings?.[id]?.rating ?? 0) -
+				($session.state.startRatings?.[id]?.rating ?? 0);
 
 			return {
 				id,
-				name: $playersStore[id]?.name || '...',
+				name: $playersStore[id]?.name ?? '...',
 				...stats,
 				pointsDifference,
 				ratingChange
@@ -97,7 +99,7 @@
 					<td>{stats.pointsFor}</td>
 					<td>{stats.pointsAgainst}</td>
 					<td>{stats.pointsDifference}</td>
-					<td class="rating">{stats.ratingChange}</td>
+					<td class="rating">{Math.round(stats.ratingChange)}</td>
 				</tr>
 			{/each}
 		{/if}

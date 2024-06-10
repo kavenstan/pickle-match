@@ -3,6 +3,7 @@
 	import type { Match, Player } from '$lib/types';
 	import { onMount } from 'svelte';
 	import { get } from 'svelte/store';
+	import RatingPill from './RatingPill.svelte';
 
 	export let match: Match;
 
@@ -21,13 +22,25 @@
 			? 'win'
 			: 'loss';
 	};
+
+	let showRatingChanges = true;
 </script>
 
 {#if match && playerMap}
 	<div class="match">
 		<div class="team right">
-			<div>{playerMap[match.team1[0]].name}</div>
-			<div>{playerMap[match.team1[1]].name}</div>
+			<div class="player">
+				<div class="name">{playerMap[match.team1[0]].name}</div>
+				{#if showRatingChanges}
+					<RatingPill value={Math.round(match.ratingChanges?.[match.team1[0]])} />
+				{/if}
+			</div>
+			<div class="player">
+				<div class="name">{playerMap[match.team1[1]].name}</div>
+				{#if showRatingChanges}
+					<RatingPill value={Math.round(match.ratingChanges?.[match.team1[1]])} />
+				{/if}
+			</div>
 		</div>
 		<div class="score">
 			<div class={scoreClass(match, 1)}>{match.team1Score < 10 ? '0' : ''}{match.team1Score}</div>
@@ -36,8 +49,18 @@
 			</div>
 		</div>
 		<div class="team">
-			<div>{playerMap[match.team2[0]].name}</div>
-			<div>{playerMap[match.team2[1]].name}</div>
+			<div class="player">
+				{#if showRatingChanges}
+					<RatingPill value={Math.round(match.ratingChanges?.[match.team2[0]])} />
+				{/if}
+				<div class="name">{playerMap[match.team2[0]].name}</div>
+			</div>
+			<div class="player">
+				{#if showRatingChanges}
+					<RatingPill value={Math.round(match.ratingChanges?.[match.team2[1]])} />
+				{/if}
+				<div class="name">{playerMap[match.team2[1]].name}</div>
+			</div>
 		</div>
 	</div>
 {/if}
@@ -70,14 +93,30 @@
 	}
 	.team {
 		flex: 1;
+		display: flex;
+		flex-direction: column;
+		justify-content: space-evenly;
 	}
+
+	.player {
+		display: flex;
+		gap: 0.5rem;
+		align-items: center;
+	}
+	.name {
+		line-height: 1rem;
+	}
+	.right .player {
+		justify-content: flex-end;
+	}
+
 	.win {
-		border-color: green;
+		border-color: var(--color-status-win);
 	}
 	.loss {
-		border-color: red;
+		border-color: var(--color-status-loss);
 	}
 	.draw {
-		border-color: yellow;
+		border-color: var(--color-status-draw);
 	}
 </style>

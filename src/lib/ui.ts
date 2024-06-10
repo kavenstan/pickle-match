@@ -21,6 +21,16 @@ export const addToast = (toast: Toast) => {
 	}
 };
 
+export const addInfoToast = (message: string) =>
+	addToast({ message, type: ToastType.Info })
+
+export const addSuccessToast = (message: string) =>
+	addToast({ message, type: ToastType.Success })
+
+export const addErrorToast = (message: string) =>
+	addToast({ message, type: ToastType.Error })
+
+
 export const dismissToast = (id?: string) => {
 	toasts.update((all) => all.filter((t) => t.id !== id));
 };

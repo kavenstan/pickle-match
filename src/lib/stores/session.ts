@@ -11,7 +11,7 @@ import {
 	onSnapshot,
 	Timestamp
 } from 'firebase/firestore';
-import type { Session } from '../types';
+import type { Session, State } from '../types';
 import { db } from '$lib/firebase';
 import { SessionStatus } from '../enums';
 import { writable } from 'svelte/store';
@@ -79,13 +79,32 @@ export async function addSession(session: Session): Promise<void> {
 }
 
 export async function updateSession(session: Partial<Session>): Promise<void> {
-	// console.log('Update Session', session);
+	console.log('Update Session', session);
 	if (!session.id) {
 		throw Error('Session id required for update');
 	}
 	const sessionRef = doc(db, collection_name, session.id!);
 	await updateDoc(sessionRef, session);
 }
+
+export const updateState = async (sessionId: string, stateUpdates: Partial<State>): Promise<void> => {
+	const sessionDocRef = doc(db, collection_name, sessionId);
+	const updates: Record<string, any> = {};
+
+	for (const key in stateUpdates) {
+		if (stateUpdates.hasOwnProperty(key)) {
+			updates[`state.${key}`] = (stateUpdates as any)[key];
+		}
+	}
+
+	try {
+		await updateDoc(sessionDocRef, updates);
+		console.log(`Successfully updated state for session ${sessionId}`);
+	} catch (error) {
+		console.error(`Error updating state for session ${sessionId}:`, error);
+	}
+}
+
 
 export async function fixSession(sessionId: string) {
 	let session = await getSession(sessionId);
@@ -100,11 +119,8 @@ export async function fixSession(sessionId: string) {
 
 	let playerIds = Array.from(playerSet);
 
-	session.state.activePlayerIds = playerIds;
-	session.state.allPlayerIds = playerIds;
-
-	await updateSession({
-		id: sessionId,
-		state: session.state
+	await updateState(session.id, {
+		activePlayerIds: playerIds,
+		allPlayerIds: playerIds
 	});
 }

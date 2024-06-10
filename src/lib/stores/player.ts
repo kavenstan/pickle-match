@@ -7,9 +7,10 @@ import {
 	writeBatch,
 	doc,
 	getDoc,
-	setDoc
+	setDoc,
+	updateDoc
 } from 'firebase/firestore';
-import type { Player, PlayerMatchStats, Seeding } from '$lib/types';
+import type { Player, PlayerMatchStats, Rating, Seeding } from '$lib/types';
 import { db } from '$lib/firebase';
 import { writable } from 'svelte/store';
 
@@ -51,50 +52,50 @@ export const addPlayer = async (player: Player): Promise<void> => {
 	});
 };
 
-export const updateRatings = async (ratingMap: Record<string, number>): Promise<void> => {
-	const playersRef = collection(db, collection_name);
-	const players = await getDocs(playersRef);
-
+export const updateRatings = async (ratings: Record<string, Rating>): Promise<void> => {
 	const batch = writeBatch(db);
 
-	players.docs.forEach((playerDoc) => {
-		const docRef = doc(db, collection_name, playerDoc.id);
-		const player = playerDoc.data() as Player;
-		batch.update(docRef, { rating: ratingMap[player.id] });
-	});
+	for (const playerId in ratings) {
+		const playerRef = doc(db, collection_name, playerId);
+		batch.update(playerRef, { rating: ratings[playerId] });
+	}
 
 	await batch.commit();
 };
 
-// export const removeTest = async (): Promise<void>  => {
-// 	const playersRef = collection(db, 'players');
-// 	const q = query(playersRef, where('name', '>=', 'test'), where('name', '<', 'test\uF7FF'));
-// 	const querySnapshot = await getDocs(q);
+export const updatePlayerRating = async (id: string, rating: Rating) => {
+	const ref = doc(db, collection_name, id);
+	await updateDoc(ref, { rating });
+}
 
-// 	const batch = writeBatch(db);
+export const updatePlayerStats = async (id: string, matchStats: PlayerMatchStats) => {
+	const ref = doc(db, collection_name, id);
+	await updateDoc(ref, { matchStats });
+}
 
-// 	querySnapshot.forEach((doc) => {
-// 		batch.delete(doc.ref);
-// 	});
+export const resetAllPlayerStats = async () => {
+	const players = await getPlayers();
+	const batch = writeBatch(db);
 
-// 	await batch.commit();
-// }
+	const defaultMatchStats = {
+		played: 0,
+		won: 0,
+		lost: 0,
+		drawn: 0,
+		pointsFor: 0,
+		pointsAgainst: 0
+	}
 
-// export const resetRatings = async (): Promise<void>  => {
-// 	const playersRef = collection(db, collection_name);
-// 	const players = await getDocs(playersRef);
+	for (const player of players) {
+		const playerRef = doc(db, collection_name, player.id);
+		const playerDoc = await getDoc(playerRef);
+		batch.update(playerRef, { matchStats: defaultMatchStats });
+	}
 
-// 	const batch = writeBatch(db);
+	await batch.commit();
+}
 
-// 	players.docs.forEach((playerDoc) => {
-// 		const docRef = doc(db, collection_name, playerDoc.id);
-// 		batch.update(docRef, { rating: 1200 });
-// 	});
-
-// 	// await batch.commit();
-// }
-
-export const updatePlayerStats = async (
+export const updatePlayersStats = async (
 	playerStats: Record<string, PlayerMatchStats>
 ): Promise<void> => {
 	const batch = writeBatch(db);

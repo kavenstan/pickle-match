@@ -258,7 +258,8 @@ const createMatch = (team1: Player[], team2: Player[], session: Session): Match 
 		team1: team1.map((player) => player.id),
 		team2: team2.map((player) => player.id),
 		team1Score: 0,
-		team2Score: 0
+		team2Score: 0,
+		ratingChanges: {}
 	};
 };
 

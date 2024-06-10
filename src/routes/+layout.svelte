@@ -1,10 +1,11 @@
-<script>
+<script lang="ts">
 	import { onMount } from 'svelte';
 	import Navbar from './Navbar.svelte';
 	import { checkAuth } from '$lib/user';
 	import { Toasts, ScrollToTop } from '$lib/components';
 	import { fetchPlayers } from '$lib/stores/player';
 	import './styles.css';
+	import '@picocss/pico/css/pico.css';
 
 	onMount(async () => {
 		// TODO: Only checked on initial render
