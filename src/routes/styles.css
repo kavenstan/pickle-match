@@ -4,6 +4,10 @@
 	--accent-color: #ffff00;
 	--light-color: #ddd;
 	--transition-speed: 600ms;
+
+	--color-status-win: #060;
+	--color-status-loss: #800;
+	--color-status-draw: #880;
 }
 
 [data-theme='light'] {
@@ -13,7 +17,7 @@
 }
 
 button {
-	padding: 0.25rem 0.5rem;
+	padding: 0.25rem 0.5rem !important;
 }
 
 button.pill {

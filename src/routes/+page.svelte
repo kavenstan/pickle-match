@@ -1,7 +1,5 @@
 <script>
 	import { userSession, hasPermission, PERMISSION_SESSION_WRITE, PERMISSION_SYNC } from '$lib/user';
-
-	import Icon from './Icon.svelte';
 </script>
 
 <h1>Pickt</h1>
@@ -60,38 +58,13 @@
 		color: var(--secondary-color);
 	}
 
-	li.active a {
-		color: var(--accent-color);
-	}
-
 	.icon {
 		font-size: 2rem;
 	}
 
-	.logo-text {
-		color: var(--accent-color);
-		font-size: 2rem;
-	}
-
-	.logo-container {
-		display: flex;
-		align-items: center;
-		gap: 0.5rem;
-		text-decoration: none;
-	}
-
 	@media only screen and (max-width: 400px) {
-		.logo {
-			display: none;
-		}
-		nav ul {
-			justify-content: space-between;
-		}
 	}
 	@media only screen and (max-width: 600px) {
-		.logo-text {
-			display: none;
-		}
 	}
 	@media only screen and (min-width: 600px) {
 	}

@@ -7,10 +7,8 @@
 	import { get } from 'svelte/store';
 
 	let seedings: Seeding[] = [];
-	let playerMap: Record<string, Player>;
 
 	onMount(async () => {
-		playerMap = get(playersStore);
 		seedings = (await getSeedings()).sort((a, b) => b.rating.rating - a.rating.rating);
 	});
 </script>

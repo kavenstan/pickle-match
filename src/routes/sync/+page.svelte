@@ -304,7 +304,10 @@
 	<div class="sync-section">
 		<h2>Functions</h2>
 		{#if hasPermission($userSession, PERMISSION_PLAYER_WRITE)}
+			<a href="/sync/seedings"><button>View Seedings</button></a>
 			<button on:click={async () => await copySeedings()}>Copy Seedings</button>
+			<br />
+			<br />
 			<button on:click={async () => await resetAllRatings()}>Reset All Ratings</button>
 			<button on:click={async () => await calculateAllRatings()}>Calculate All Ratings</button>
 			<br />

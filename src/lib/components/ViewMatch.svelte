@@ -36,7 +36,7 @@
 				{/if}
 			</div>
 			<div class="player">
-				{playerMap[match.team1[1]].name}
+				<div class="name">{playerMap[match.team1[1]].name}</div>
 				{#if showRatingChanges}
 					<RatingPill value={Math.round(match.ratingChanges?.[match.team1[1]])} />
 				{/if}
@@ -53,13 +53,13 @@
 				{#if showRatingChanges}
 					<RatingPill value={Math.round(match.ratingChanges?.[match.team2[0]])} />
 				{/if}
-				{playerMap[match.team2[0]].name}
+				<div class="name">{playerMap[match.team2[0]].name}</div>
 			</div>
 			<div class="player">
 				{#if showRatingChanges}
 					<RatingPill value={Math.round(match.ratingChanges?.[match.team2[1]])} />
 				{/if}
-				{playerMap[match.team2[1]].name}
+				<div class="name">{playerMap[match.team2[1]].name}</div>
 			</div>
 		</div>
 	</div>
@@ -93,6 +93,9 @@
 	}
 	.team {
 		flex: 1;
+		display: flex;
+		flex-direction: column;
+		justify-content: space-evenly;
 	}
 
 	.player {
@@ -100,17 +103,20 @@
 		gap: 0.5rem;
 		align-items: center;
 	}
+	.name {
+		line-height: 1rem;
+	}
 	.right .player {
 		justify-content: flex-end;
 	}
 
 	.win {
-		border-color: green;
+		border-color: var(--color-status-win);
 	}
 	.loss {
-		border-color: red;
+		border-color: var(--color-status-loss);
 	}
 	.draw {
-		border-color: yellow;
+		border-color: var(--color-status-draw);
 	}
 </style>
