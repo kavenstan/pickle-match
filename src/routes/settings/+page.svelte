@@ -1,13 +1,6 @@
 <script lang="ts">
-	import { simulate } from '$lib/rating';
 	import { signInPopUp, signOut } from '$lib/user';
 	import { userSession } from '$lib/user';
-
-	let theme = 'dark';
-	function toggleTheme() {
-		theme = theme === 'dark' ? 'light' : 'dark';
-		document.documentElement.setAttribute('data-theme', theme);
-	}
 </script>
 
 <h1>Settings</h1>
@@ -24,13 +17,6 @@
 		</div>
 	{/if}
 </div>
-
-<div class="setting-section">
-	<h2>UI</h2>
-	<button on:click={toggleTheme}>Toggle Theme</button>
-</div>
-
-<button on:click={() => simulate()}>Simulate</button>
 
 <style>
 	.setting-section {

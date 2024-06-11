@@ -48,7 +48,7 @@ export const checkAuth = () => {
 		}
 
 		userSession.update((curr) => {
-			return { ...curr, isLoading: false, user: firebaseUser };
+			return { ...curr, isLoading: false, user: firebaseUser, loggedIn: true };
 		});
 	});
 };

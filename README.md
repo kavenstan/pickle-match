@@ -29,6 +29,7 @@ You can preview the production build with `pnpm run preview`.
   - Matchmaking wizard
   - Creating manual matches
 - Features
+  - Server side pages
   - ELO calculation configuration
     - Higher K for newer players
     - Initial rating values for known players
@@ -38,9 +39,6 @@ You can preview the production build with `pnpm run preview`.
     - User management
     - Server auth check
     - Client auth check
-  - Graph rating change over time per player
-  - Save rating changes per match
   - Caching
-    - Limit direct reads to firestore
+    - Limit direct reads from firestore
 - Bugs
-  - Player ids/names used interchangably

@@ -1,6 +1,7 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
 	import Navbar from './Navbar.svelte';
+	import Sidebar from './Sidebar.svelte';
+	import { onMount } from 'svelte';
 	import { checkAuth } from '$lib/user';
 	import { Toasts, ScrollToTop } from '$lib/components';
 	import { fetchPlayers } from '$lib/stores/player';
@@ -19,7 +20,10 @@
 <Navbar />
 
 <main class="container">
-	<slot />
+	<Sidebar />
+	<div class="content">
+		<slot />
+	</div>
 </main>
 
 <ScrollToTop />
@@ -28,10 +32,13 @@
 
 <style>
 	.container {
+		display: flex;
 		max-width: 1200px;
-		margin: 0 auto;
+	}
+	.content {
 		padding: 1rem;
 	}
+
 	@media only screen and (max-width: 600px) {
 		main {
 			margin: 0;
