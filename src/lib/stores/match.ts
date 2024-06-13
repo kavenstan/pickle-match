@@ -41,7 +41,7 @@ export const removeMatch = async (matchId: string) => {
 }
 
 export const subscribeToMatches = (sessionId: string) => {
-	console.log('subscribeToMatches', sessionId);
+	// console.log('subscribeToMatches', sessionId);
 	const matchesRef = collection(db, collection_name);
 	const matchesQuery = query(matchesRef, where('sessionId', '==', sessionId));
 

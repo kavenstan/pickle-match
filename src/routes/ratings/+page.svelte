@@ -91,6 +91,7 @@
 	.name a {
 		text-decoration: none;
 		font-weight: bold;
+		color: var(--secondary-color);
 	}
 	tr:hover .name a {
 		text-decoration: underline;

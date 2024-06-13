@@ -42,10 +42,6 @@
 		player = await getPlayer(playerId);
 		sessions = await getPlayerSessions(playerId);
 
-		for (const session of sessions) {
-			console.log(session.date.toDate());
-		}
-
 		ratings = sessions.map(
 			(session) =>
 				({
