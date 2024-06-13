@@ -48,9 +48,9 @@
 	<tbody>
 		{#each players as player, index}
 			<tr>
-				<th class={`grade ${grade(player.rating.rating)}`}></th>
+				<td class={`grade ${grade(player.rating.rating)}`}></td>
 				<td class="index">{index + 1}</td>
-				<td class="name"><strong>{player.name}</strong></td>
+				<td class="name"><a href="/players/{player.id}">{player.name}</a></td>
 				<td class="played">{player.matchStats?.played}</td>
 				<td class="won">{player.matchStats?.won}</td>
 				<td class="won"
@@ -87,6 +87,14 @@
 		.drawn {
 			display: none;
 		}
+	}
+	.name a {
+		text-decoration: none;
+		font-weight: bold;
+		color: var(--secondary-color);
+	}
+	tr:hover .name a {
+		text-decoration: underline;
 	}
 	.rating {
 		width: 60px;

@@ -1,58 +1,87 @@
 <script lang="ts">
-	import { page } from '$app/stores';
-	import { PERMISSION_SYNC, PERMISSION_SESSION_WRITE, hasPermission, userSession } from '$lib/user';
+	import { userSession, signInPopUp, signOut } from '$lib/user';
 	import 'iconify-icon';
-	import Icon from './Icon.svelte';
+	import Icon from '../lib/components/Icon.svelte';
+	import ThemeToggle from '$lib/components/ThemeToggle.svelte';
+	import Avatar from '$lib/components/Avatar.svelte';
+	import { afterUpdate, onMount } from 'svelte';
+
+	export let toggleSidebar;
+	export let showSidebar;
+
+	let dialog: HTMLDialogElement;
+
+	const toggleDialog = () => {
+		if (dialog.open) {
+			dialog.close();
+		} else {
+			dialog.showModal();
+		}
+	};
+
+	const closeDialog = () => {
+		dialog?.close();
+	};
+
+	const handleSignOut = async () => {
+		closeDialog();
+		await signOut();
+	};
+
+	onMount(() => {
+		document.addEventListener('keydown', (e) => {
+			if (e.key === 'Escape' && dialog?.open) {
+				closeDialog();
+			}
+		});
+	});
+
+	afterUpdate(() => {
+		dialog?.addEventListener('click', (e) => {
+			if (e.target === dialog) {
+				closeDialog();
+			}
+		});
+	});
 </script>
 
-<nav>
+<header>
 	<div class="nav-inner">
 		<a href="/" class="logo-container">
 			<div class="logo"><Icon /></div>
 			<span class="link-text logo-text">Pickt</span>
 		</a>
-		<ul>
-			<li
-				class={$page.url.pathname.startsWith('/ratings') ? 'active' : undefined}
-				aria-current={$page.url.pathname === '/ratings' ? 'page' : undefined}
-			>
-				<a href="/ratings"><iconify-icon class="icon" icon="ph:user-list" /> </a>
-			</li>
-			<li
-				class={$page.url.pathname.startsWith('/results') ? 'active' : undefined}
-				aria-current={$page.url.pathname === '/results' ? 'page' : undefined}
-			>
-				<a href="/results"><iconify-icon class="icon" icon="carbon:result" /> </a>
-			</li>
-			{#if hasPermission($userSession, PERMISSION_SESSION_WRITE)}
-				<li
-					class={$page.url.pathname.startsWith('/matchmaking') ? 'active' : undefined}
-					aria-current={$page.url.pathname.startsWith('/matchmaking') ? 'page' : undefined}
-				>
-					<a href="/matchmaking"><iconify-icon class="icon" icon="ph:magic-wand" /> </a>
-				</li>
+		<button on:click={toggleSidebar} class="menu-icon" class:open={showSidebar}
+			><iconify-icon icon="carbon:menu" /></button
+		>
+		<div class="user-actions">
+			<ThemeToggle />
+			{#if !$userSession || $userSession?.loading}
+				<div>...</div>
+			{:else if $userSession?.user}
+				<div class="user">
+					<Avatar name={$userSession?.user?.displayName ?? ''} on:click={toggleDialog} />
+					<dialog bind:this={dialog} class="user-menu">
+						<button on:click={async () => handleSignOut()}>Sign Out</button>
+					</dialog>
+				</div>
+			{:else}
+				<button on:click={async () => signInPopUp()}>Login</button>
 			{/if}
-			{#if hasPermission($userSession, PERMISSION_SYNC)}
-				<li
-					class={$page.url.pathname.startsWith('/sync') ? 'active' : undefined}
-					aria-current={$page.url.pathname.startsWith('/sync') ? 'page' : undefined}
-				>
-					<a href="/sync"><iconify-icon class="icon" icon="iconamoon:synchronize-light" /> </a>
-				</li>
-			{/if}
-			<li
-				class={$page.url.pathname.startsWith('/settings') ? 'active' : undefined}
-				aria-current={$page.url.pathname.startsWith('/settings') ? 'page' : undefined}
-			>
-				<a href="/settings"><iconify-icon class="icon" icon="iconamoon:settings-light" /> </a>
-			</li>
-		</ul>
+		</div>
 	</div>
-</nav>
+</header>
 
 <style>
-	nav {
-		background-color: var(--primary-color);
+	header {
+		border-bottom: 1px solid rgba(32, 38, 50, 0.9);
+		backdrop-filter: blur(1rem);
+		position: sticky;
+		top: 0;
+		transition:
+			border-top-color 0.4s ease-in-out,
+			box-shadow 0.4s ease-in-out;
+		z-index: 2;
 	}
 
 	.nav-inner {
@@ -62,36 +91,6 @@
 		margin: auto;
 		width: 100%;
 		padding: 0 1rem;
-	}
-
-	ul {
-		padding: 0;
-		margin: 0 auto;
-		display: flex;
-		align-items: center;
-		justify-content: end;
-		width: 100%;
-	}
-
-	li a {
-		display: flex;
-		align-items: center;
-		height: 3rem;
-		color: var(--secondary-color);
-		text-decoration: none;
-		transition: var(--transition-speed);
-	}
-	li a:hover {
-		filter: grayscale(0%) opacity(1);
-		color: var(--secondary-color);
-	}
-
-	li.active a {
-		color: var(--accent-color);
-	}
-
-	.icon {
-		font-size: 2rem;
 	}
 
 	.logo-text {
@@ -106,12 +105,51 @@
 		text-decoration: none;
 	}
 
+	.user-actions {
+		display: flex;
+		align-items: center;
+	}
+
+	dialog.user-menu {
+		position: fixed;
+		inset: 0 0 0 auto;
+		height: 100vh;
+		width: 10rem;
+		min-width: unset;
+
+		padding: 0.5rem;
+		margin: 0;
+
+		background-color: black;
+		border: 1px solid #383838;
+
+		border-radius: 1rem;
+		border-bottom-right-radius: 0;
+		border-top-right-radius: 0;
+	}
+
+	.menu-icon {
+		display: none;
+		color: var(--accent-color);
+		font-size: 2rem;
+		height: 3rem;
+		background: none;
+		border: 0;
+		transition: ease 300ms;
+	}
+	.menu-icon:focus {
+		box-shadow: none;
+	}
+	.menu-icon.open {
+		transform: rotate(90deg);
+	}
+	.drop-menu {
+		transition: ease 300ms;
+	}
+
 	@media only screen and (max-width: 400px) {
 		.logo {
 			display: none;
-		}
-		nav ul {
-			justify-content: space-between;
 		}
 	}
 	@media only screen and (max-width: 576px) {
@@ -119,6 +157,12 @@
 			display: none;
 		}
 	}
-	@media only screen and (min-width: 576px) {
+	@media only screen and (max-width: 768px) {
+		.logo-container {
+			display: none;
+		}
+		.menu-icon {
+			display: block;
+		}
 	}
 </style>

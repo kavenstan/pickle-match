@@ -11,7 +11,7 @@
 	import { get } from 'svelte/store';
 
 	let playerMap: Record<string, Player>;
-
+	let sortedPlayers: Player[] = [];
 	let selectedPlayerIds: string[] = [];
 
 	let newPlayerModal: HTMLDialogElement | null = null;
@@ -28,7 +28,7 @@
 	let courts: number = 4;
 	let matchmakingAlgorithm: MatchmakingType = MatchmakingType.Balanced;
 	let ratingDiffLimit = 100;
-	let maxIterations = 1000;
+	let maxIterations = 10000;
 	let staticOrder = '{}';
 
 	let step: number = 1;
@@ -36,14 +36,15 @@
 
 	onMount(() => {
 		playerMap = get(playersStore);
+		sortPlayers();
 	});
 
 	const sortPlayers = (sort: string = 'name') => {
 		let unsorted = Object.values(playerMap);
 		if (sort === 'rating') {
-			return unsorted.sort((a, b) => a.name.localeCompare(b.name));
+			sortedPlayers = unsorted.sort((a, b) => a.name.localeCompare(b.name));
 		}
-		return unsorted.sort((a, b) => a.name.localeCompare(b.name));
+		sortedPlayers = unsorted.sort((a, b) => a.name.localeCompare(b.name));
 	};
 
 	const togglePlayer = (player: Player) => {
@@ -66,11 +67,12 @@
 		}
 
 		try {
-			await addPlayer({ name: newPlayerName, rating: newPlayerRating } as Player).then(
+			await addPlayer({ id: newId(), name: newPlayerName, rating: newPlayerRating } as Player).then(
 				async (_) => {
 					newPlayerModal?.close();
 					await fetchPlayers();
 					playerMap = get(playersStore);
+					sortPlayers();
 					newPlayerName = '';
 					newPlayerError = '';
 					newPlayerRating = newPlayerRating;
@@ -154,7 +156,7 @@
 				{/if}
 			</div>
 			<div class="players">
-				{#each sortPlayers('name') as player}
+				{#each sortedPlayers as player}
 					<button
 						on:click={() => togglePlayer(player)}
 						class="secondary pill {selectedPlayerIds.includes(player.id) ? '' : 'outline'}"

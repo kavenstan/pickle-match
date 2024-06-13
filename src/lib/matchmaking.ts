@@ -3,12 +3,14 @@ import { getPresets } from './preset';
 import type { Player, Session, Match } from '$lib/types';
 import { MatchmakingType } from '$lib/enums';
 import { newId } from '$lib/utils';
+import { updateState } from './stores/session';
+import { addMatches } from './stores/match';
 
-export const createRound = (
+export const createRound = async (
 	session: Session,
 	sessionMatches: Match[],
 	allPlayers: Player[]
-): Match[] => {
+) => {
 	if (session.config.matchmakingType === MatchmakingType.Manual) {
 		return [];
 	}
@@ -24,12 +26,16 @@ export const createRound = (
 	let matches = createMatches(playingPlayers, session, previousPairingSet);
 
 	if (matches.length > 0) {
-		// TODO : Check this is saved
 		session.state.sitOutIndex =
 			(session.state.sitOutIndex + sitOutPlayerNames.length) %
 			session.state.sitOutOrderPlayerIds.length;
 		session.state.currentRound += 1;
-		return matches;
+
+		await updateState(session.id, {
+			currentRound: session.state.currentRound,
+			sitOutIndex: session.state.sitOutIndex
+		})
+		await addMatches(matches);
 	}
 
 	throw new Error('Failed to create a valid round within max iterations');
@@ -174,7 +180,7 @@ const balancedMatchmaking = (
 
 		iterations++;
 
-		if (iterations % Math.ceil(session.config.maxIterations / 10) === 0) {
+		if (iterations % Math.ceil(session.config.maxIterations / 50) === 0) {
 			currentRatingDiffLimit *= 1.1;
 		}
 	}
@@ -183,7 +189,7 @@ const balancedMatchmaking = (
 
 const staticMatchmaking = (players: Player[], session: Session): Match[] => {
 	// Sort players by rating
-	players.sort((a, b) => a.rating - b.rating);
+	players.sort((a, b) => a.rating.rating - b.rating.rating);
 
 	// let matchPairings: Round[] = [];
 	let matchPairings: Match[] = [];
@@ -221,14 +227,14 @@ const isValidMatch = (
 	const [player3, player4] = team2;
 
 	if (
-		Math.abs(player1.rating - player2.rating) > ratingDiffLimit ||
-		Math.abs(player3.rating - player4.rating) > ratingDiffLimit
+		Math.abs(player1.rating.rating - player2.rating.rating) > ratingDiffLimit ||
+		Math.abs(player3.rating.rating - player4.rating.rating) > ratingDiffLimit
 	) {
 		return false;
 	}
 
-	const avgTeam1Rating = (player1.rating + player2.rating) / 2;
-	const avgTeam2Rating = (player3.rating + player4.rating) / 2;
+	const avgTeam1Rating = (player1.rating.rating + player2.rating.rating) / 2;
+	const avgTeam2Rating = (player3.rating.rating + player4.rating.rating) / 2;
 
 	if (Math.abs(avgTeam1Rating - avgTeam2Rating) > ratingDiffLimit) {
 		return false;

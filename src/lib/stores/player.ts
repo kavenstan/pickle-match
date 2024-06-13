@@ -23,6 +23,11 @@ export const seedingStore = writable<Seeding[]>([]);
 
 // Firestore
 
+export const getPlayer = async (id: string): Promise<Player> => {
+	const ref = doc(db, collection_name, id);
+	return (await getDoc(ref)).data() as Player;
+};
+
 export const getPlayers = async (): Promise<Player[]> => {
 	const querySnapshot = await getDocs(
 		query(collection(db, collection_name), orderBy('rating', 'desc'))
@@ -66,12 +71,12 @@ export const updateRatings = async (ratings: Record<string, Rating>): Promise<vo
 export const updatePlayerRating = async (id: string, rating: Rating) => {
 	const ref = doc(db, collection_name, id);
 	await updateDoc(ref, { rating });
-}
+};
 
 export const updatePlayerStats = async (id: string, matchStats: PlayerMatchStats) => {
 	const ref = doc(db, collection_name, id);
 	await updateDoc(ref, { matchStats });
-}
+};
 
 export const resetAllPlayerStats = async () => {
 	const players = await getPlayers();
@@ -84,7 +89,7 @@ export const resetAllPlayerStats = async () => {
 		drawn: 0,
 		pointsFor: 0,
 		pointsAgainst: 0
-	}
+	};
 
 	for (const player of players) {
 		const playerRef = doc(db, collection_name, player.id);
@@ -93,7 +98,7 @@ export const resetAllPlayerStats = async () => {
 	}
 
 	await batch.commit();
-}
+};
 
 export const updatePlayersStats = async (
 	playerStats: Record<string, PlayerMatchStats>
