@@ -5,22 +5,32 @@
 	import { checkAuth } from '$lib/user';
 	import { Toasts, ScrollToTop } from '$lib/components';
 	import { fetchPlayers } from '$lib/stores/player';
-	import './styles.css';
 	import '@picocss/pico/css/pico.css';
+	import './styles.css';
 
 	onMount(async () => {
 		// TODO: Only checked on initial render
 		checkAuth();
 		await fetchPlayers();
 	});
+
+	let showSidebar = false;
+
+	const toggleSidebar = () => {
+		showSidebar = !showSidebar;
+	};
+
+	const closeSidebar = () => {
+		showSidebar = false;
+	};
 </script>
 
 <Toasts />
 
-<Navbar />
+<Navbar {showSidebar} {toggleSidebar} />
 
 <main class="container">
-	<Sidebar />
+	<Sidebar {showSidebar} {closeSidebar} />
 	<div class="content">
 		<slot />
 	</div>

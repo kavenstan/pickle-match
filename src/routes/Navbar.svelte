@@ -1,9 +1,48 @@
 <script lang="ts">
 	import { userSession, signInPopUp, signOut } from '$lib/user';
 	import 'iconify-icon';
-	import Icon from './Icon.svelte';
+	import Icon from '../lib/components/Icon.svelte';
 	import ThemeToggle from '$lib/components/ThemeToggle.svelte';
 	import Avatar from '$lib/components/Avatar.svelte';
+	import { afterUpdate, onMount } from 'svelte';
+
+	export let toggleSidebar;
+	export let showSidebar;
+
+	let dialog: HTMLDialogElement;
+
+	const toggleDialog = () => {
+		if (dialog.open) {
+			dialog.close();
+		} else {
+			dialog.showModal();
+		}
+	};
+
+	const closeDialog = () => {
+		dialog?.close();
+	};
+
+	const handleSignOut = async () => {
+		closeDialog();
+		await signOut();
+	};
+
+	onMount(() => {
+		document.addEventListener('keydown', (e) => {
+			if (e.key === 'Escape' && dialog?.open) {
+				closeDialog();
+			}
+		});
+	});
+
+	afterUpdate(() => {
+		dialog?.addEventListener('click', (e) => {
+			if (e.target === dialog) {
+				closeDialog();
+			}
+		});
+	});
 </script>
 
 <header>
@@ -12,20 +51,29 @@
 			<div class="logo"><Icon /></div>
 			<span class="link-text logo-text">Pickt</span>
 		</a>
+		<button on:click={toggleSidebar} class="menu-icon" class:open={showSidebar}
+			><iconify-icon icon="carbon:menu" /></button
+		>
 		<div class="user-actions">
-			{#if $userSession?.loggedIn}
-				<Avatar on:click={signOut} name={$userSession?.user?.displayName ?? ''} />
-			{:else}
-				<button on:click={signInPopUp}>Login</button>
-			{/if}
 			<ThemeToggle />
+			{#if !$userSession || $userSession?.loading}
+				<div>...</div>
+			{:else if $userSession?.user}
+				<div class="user">
+					<Avatar name={$userSession?.user?.displayName ?? ''} on:click={toggleDialog} />
+					<dialog bind:this={dialog} class="user-menu">
+						<button on:click={async () => handleSignOut()}>Sign Out</button>
+					</dialog>
+				</div>
+			{:else}
+				<button on:click={async () => signInPopUp()}>Login</button>
+			{/if}
 		</div>
 	</div>
 </header>
 
 <style>
 	header {
-		/* background-color: var(--primary-color); */
 		border-bottom: 1px solid rgba(32, 38, 50, 0.9);
 		backdrop-filter: blur(1rem);
 		position: sticky;
@@ -45,36 +93,6 @@
 		padding: 0 1rem;
 	}
 
-	ul {
-		padding: 0;
-		margin: 0 auto;
-		display: flex;
-		align-items: center;
-		justify-content: end;
-		width: 100%;
-	}
-
-	li a {
-		display: flex;
-		align-items: center;
-		height: 3rem;
-		color: var(--secondary-color);
-		text-decoration: none;
-		transition: var(--transition-speed);
-	}
-	li a:hover {
-		filter: grayscale(0%) opacity(1);
-		color: var(--secondary-color);
-	}
-
-	li.active a {
-		color: var(--accent-color);
-	}
-
-	.icon {
-		font-size: 2rem;
-	}
-
 	.logo-text {
 		color: var(--accent-color);
 		font-size: 2rem;
@@ -92,12 +110,46 @@
 		align-items: center;
 	}
 
+	dialog.user-menu {
+		position: fixed;
+		inset: 0 0 0 auto;
+		height: 100vh;
+		width: 10rem;
+		min-width: unset;
+
+		padding: 0.5rem;
+		margin: 0;
+
+		background-color: black;
+		border: 1px solid #383838;
+
+		border-radius: 1rem;
+		border-bottom-right-radius: 0;
+		border-top-right-radius: 0;
+	}
+
+	.menu-icon {
+		display: none;
+		color: var(--accent-color);
+		font-size: 2rem;
+		height: 3rem;
+		background: none;
+		border: 0;
+		transition: ease 300ms;
+	}
+	.menu-icon:focus {
+		box-shadow: none;
+	}
+	.menu-icon.open {
+		transform: rotate(90deg);
+	}
+	.drop-menu {
+		transition: ease 300ms;
+	}
+
 	@media only screen and (max-width: 400px) {
 		.logo {
 			display: none;
-		}
-		nav ul {
-			justify-content: space-between;
 		}
 	}
 	@media only screen and (max-width: 576px) {
@@ -105,6 +157,12 @@
 			display: none;
 		}
 	}
-	@media only screen and (min-width: 576px) {
+	@media only screen and (max-width: 768px) {
+		.logo-container {
+			display: none;
+		}
+		.menu-icon {
+			display: block;
+		}
 	}
 </style>

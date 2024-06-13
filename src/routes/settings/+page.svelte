@@ -7,9 +7,11 @@
 
 <div class="setting-section">
 	<h2>Profile</h2>
-	{#if $userSession?.loggedIn}
-		<div>Signed in as: {$userSession.user?.displayName} ({$userSession.user?.email})</div>
+	{#if $userSession?.user}
+		<div>Name: {$userSession.user?.displayName}</div>
+		<div>Email: {$userSession.user?.email}</div>
 		<div>Role: {$userSession.role}</div>
+		<br />
 		<button on:click={signOut}>Sign Out</button>
 	{:else}
 		<div>

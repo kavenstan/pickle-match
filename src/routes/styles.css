@@ -17,13 +17,11 @@ Breakpoints: 576, 768, 1024, 1280, 1536
 [data-theme='light'] {
 	--primary-color: #2c3e50;
 	--secondary-color: #0172ad;
-	--accent-color: #ffff00;
-
-
+	--accent-color: #888800;
 }
 
 button {
-	padding: 0.25rem 0.5rem !important;
+	padding: 0.25rem 0.5rem;
 }
 
 button.pill {

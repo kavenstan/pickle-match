@@ -30,7 +30,7 @@ export type SessionState = {
 	user: User | null;
 	role: string;
 	loading?: boolean;
-	loggedIn?: boolean;
+	// loggedIn?: boolean;
 };
 
 const restrictedRoutes = [
@@ -48,7 +48,7 @@ export const checkAuth = () => {
 		}
 
 		userSession.update((curr) => {
-			return { ...curr, isLoading: false, user: firebaseUser, loggedIn: true };
+			return { ...curr, isLoading: false, user: firebaseUser };
 		});
 	});
 };
@@ -66,7 +66,7 @@ export const signInPopUp = async () => {
 	let provider: GoogleAuthProvider = new GoogleAuthProvider();
 	try {
 		const result = await signInWithPopup(auth, provider);
-		console.log('User signed in: ', result.user.email);
+		// console.log('User signed in: ', result.user.email);
 	} catch (error) {
 		console.error('Error signing in: ', error);
 	}

@@ -2,7 +2,7 @@
 	export let name: string;
 </script>
 
-<button>{name.substring(0, 1)}</button>
+<button on:click>{name.substring(0, 1)}</button>
 
 <style>
 	button {

@@ -1,22 +1,28 @@
 <script lang="ts">
-	import type { Match, Session } from '$lib/types';
+	import type { Match, Player, Session } from '$lib/types';
 	import { onMount } from 'svelte';
 	import { sessionStore, subscribeToSession, updateState } from '$lib/stores/session';
 	import { MatchmakingType, SessionStatus, ToastType } from '$lib/enums';
 	import { getMatchPlayerIds, newId } from '$lib/utils';
 	import Round from './Round.svelte';
 	import CreateMatch from './CreateMatch.svelte';
-	import { addMatch, subscribeToMatches, sessionMatchesStore } from '$lib/stores/match';
+	import { addMatch, subscribeToMatches, sessionMatchesStore, addMatches } from '$lib/stores/match';
 	import { goto } from '$app/navigation';
 	import { addToast } from '$lib/ui';
+	import { createRound } from '$lib/matchmaking';
+	import { playersStore } from '$lib/stores/player';
+	import { get } from 'svelte/store';
 
 	export let sessionId: string;
+	let allPlayers: Player[];
 	let session: Session | null;
 	let sessionMatches: Match[] | null;
 	let pendingMatches: Match[] = [];
 	let availablePlayerIds: string[];
 
 	onMount(() => {
+		allPlayers = Object.values(get(playersStore));
+
 		const unsubscribeSession = subscribeToSession(sessionId);
 		const unsubscribeSessionStore = sessionStore.subscribe((data) => {
 			session = data as Session;
@@ -37,11 +43,13 @@
 	});
 
 	const startNewRound = async () => {
-		if (session) {
+		if (session?.config.matchmakingType === MatchmakingType.Manual) {
 			session.state.currentRound++;
 			await updateState(session.id, {
 				currentRound: session.state.currentRound++
 			});
+		} else {
+			await createRound(session!, sessionMatches!, allPlayers);
 		}
 	};
 
