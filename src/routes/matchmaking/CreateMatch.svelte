@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { matchStore, removeMatch, subscribeToMatch, updateMatchTeams } from '$lib/stores/match';
+	import { matchStore, deleteMatch, subscribeToMatch, updateMatchTeams } from '$lib/stores/match';
 	import { playersStore } from '$lib/stores/player';
 	import type { Match, Player } from '$lib/types';
 	import { getMatchPlayerIds } from '$lib/utils';
@@ -78,7 +78,7 @@
 	};
 
 	const cancel = async () => {
-		await removeMatch(match.id);
+		await deleteMatch(match.id);
 	};
 </script>
 

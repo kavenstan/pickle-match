@@ -16,6 +16,20 @@ import { writable } from 'svelte/store';
 
 const collection_name = 'players';
 
+export const defaultPlayerMatchStats: PlayerMatchStats = {
+	played: 0,
+	won: 0,
+	drawn: 0,
+	lost: 0,
+	pointsFor: 0,
+	pointsAgainst: 0
+};
+
+export const defaultPlayerRating: Rating = {
+	rating: 1200,
+	rd: 350
+};
+
 // Store
 
 export const playersStore = writable<Record<string, Player>>({});

@@ -35,9 +35,28 @@ export const subscribeToMatch = (matchId: string) => {
 	});
 };
 
-export const removeMatch = async (matchId: string) => {
+export const deleteMatch = async (matchId: string) => {
 	const matchRef = doc(collection(db, collection_name), matchId);
 	await deleteDoc(matchRef);
+}
+
+export const deleteSessionMatches = async (sessionId: string) => {
+	try {
+		const matchesRef = collection(db, collection_name);
+		const q = query(matchesRef, where('sessionId', '==', sessionId));
+		const querySnapshot = await getDocs(q);
+
+		const batch = writeBatch(matchesRef.firestore);
+
+		querySnapshot.forEach((doc) => {
+			batch.delete(doc.ref);
+		});
+
+		await batch.commit();
+		console.log(`Successfully deleted matches for sessionId: ${sessionId}`);
+	} catch (error) {
+		console.error("Error deleting matches: ", error);
+	}
 }
 
 export const subscribeToMatches = (sessionId: string) => {
