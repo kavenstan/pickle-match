@@ -27,18 +27,35 @@ You can preview the production build with `pnpm run preview`.
   - Tables
 - UX
   - Matchmaking wizard
-  - Creating manual matches
+  - Easier score entry 
+   - Move to second score selection after first
+   - Move to next match after match
+  - Easier match creation
+   - Once last player selected - button to add another match / next round / set scores
 - Features
-  - Server side pages
+  - Matchmaking
+   - On create - group information 
+     - Amount of combinations of players
+     - Amount of valid combinations with current rating limit
+     - Suggest rate limit / repeat combinations?
+   - Balanced 
+    - if no pairing found, offer options to increase ranges or allow repeat partnerships
+    - if allowing repeat, don't choose recent partnerships
+  - Player
+   - Match History
+  - Add a configurable timer to start the round?
   - ELO calculation configuration
-    - Higher K for newer players
-    - Initial rating values for known players
-    - Clustering ratings for grades Gold/Silver/Bronze?
-  - User
+    - Higher K for newer players ?
+  - Arch
+   - Server side pages
+   - Caching
+   - User
     - Roles/Permissions
     - User management
     - Server auth check
     - Client auth check
-  - Caching
-    - Limit direct reads from firestore
 - Bugs
+ - Stats / Ratings not calculated on session end
+ - Should be some provisional rating calculation between rounds
+ - Matchmaking page 3 empty
+ - Starting matchmaking does nothing - need to refresh to see

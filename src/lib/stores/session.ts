@@ -9,7 +9,8 @@ import {
 	getDoc,
 	setDoc,
 	onSnapshot,
-	Timestamp
+	Timestamp,
+	deleteDoc
 } from 'firebase/firestore';
 import type { Session, State } from '../types';
 import { db } from '$lib/firebase';
@@ -37,6 +38,11 @@ export async function getSession(sessionId: string): Promise<Session> {
 	const sessionRef = doc(db, collection_name, sessionId);
 	const sessionDoc = await getDoc(sessionRef);
 	return { id: sessionDoc.id, ...sessionDoc.data() } as Session;
+}
+
+export const deleteSession = async (sessionId: string) => {
+	const sessionRef = doc(collection(db, collection_name), sessionId);
+	await deleteDoc(sessionRef);
 }
 
 export async function getSessions(): Promise<Session[]> {

@@ -42,13 +42,12 @@
 		user-select: none;
 		background-color: rgb(0 0 0 / 1);
 		color: #666666;
-		line-height: 0.5rem;
 		border-radius: 1.25rem;
 		border: 0;
-		padding: 0;
-		margin: 0;
+
 		display: flex;
 		justify-content: center;
+		align-items: center;
 	}
 
 	button:focus {

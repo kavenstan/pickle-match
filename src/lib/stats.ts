@@ -1,5 +1,5 @@
 import { getMatchesForSession } from "./stores/match";
-import { getPlayers, updatePlayersStats } from "./stores/player";
+import { defaultPlayerMatchStats, getPlayers, updatePlayersStats } from "./stores/player";
 import { getSessions, updateState } from "./stores/session";
 import type { Match, Player, PlayerMatchStats, Session } from "./types";
 
@@ -67,7 +67,9 @@ const extractPlayerStatistics = (matches: Match[]): Record<string, PlayerMatchSt
     const team1Won = match.team1Score > match.team2Score;
 
     match.team1.forEach((playerId) => {
-      if (!stats[playerId]) stats[playerId] = initializePlayerMatchStats();
+      if (!stats[playerId]) {
+        stats[playerId] = defaultPlayerMatchStats;
+      }
       updateStats(
         stats[playerId],
         isDrawn ? 'drawn' : team1Won ? 'won' : 'lost',
@@ -77,7 +79,9 @@ const extractPlayerStatistics = (matches: Match[]): Record<string, PlayerMatchSt
     });
 
     match.team2.forEach((playerId) => {
-      if (!stats[playerId]) stats[playerId] = initializePlayerMatchStats();
+      if (!stats[playerId]) {
+        stats[playerId] = defaultPlayerMatchStats;
+      }
       updateStats(
         stats[playerId],
         isDrawn ? 'drawn' : team1Won ? 'lost' : 'won',
@@ -110,22 +114,13 @@ const initializePlayerStats = (players: Player[]): Record<string, PlayerMatchSta
   const playerStats: Record<string, PlayerMatchStats> = {};
 
   players.forEach((player) => {
-    playerStats[player.id] = player.matchStats ?? initializePlayerMatchStats;
+    playerStats[player.id] = player.matchStats ?? defaultPlayerMatchStats;
   });
 
   return playerStats;
 };
 
-const initializePlayerMatchStats = (): PlayerMatchStats => {
-  return {
-    played: 0,
-    won: 0,
-    drawn: 0,
-    lost: 0,
-    pointsFor: 0,
-    pointsAgainst: 0
-  };
-};
+
 
 const updateStats = (
   playerStats: PlayerMatchStats,

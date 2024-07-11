@@ -24,6 +24,10 @@ button {
 	padding: 0.25rem 0.5rem;
 }
 
+button.danger {
+	background-color: #800;
+}
+
 button.pill {
 	border-radius: 20px;
 	padding: 0.25rem 1rem;

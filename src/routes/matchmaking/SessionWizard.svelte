@@ -2,9 +2,21 @@
 	import type { Player, Session, Rating } from '$lib/types';
 	import { onMount } from 'svelte';
 	import { addSession } from '$lib/stores/session';
-	import { addPlayer, playersStore, fetchPlayers } from '$lib/stores/player';
+	import {
+		addPlayer,
+		playersStore,
+		fetchPlayers,
+		defaultPlayerMatchStats,
+		defaultPlayerRating
+	} from '$lib/stores/player';
 	import { MatchmakingType, SessionStatus, ToastType } from '$lib/enums';
-	import { mapPlayerNamesToRating, newId } from '$lib/utils';
+	import {
+		combinations,
+		mapPlayerNamesToRating,
+		median,
+		newId,
+		standardDeviation
+	} from '$lib/utils';
 	import { Timestamp } from 'firebase/firestore';
 	import { goto } from '$app/navigation';
 	import { addToast } from '$lib/ui';
@@ -16,10 +28,7 @@
 
 	let newPlayerModal: HTMLDialogElement | null = null;
 	let newPlayerName: string = '';
-	let newPlayerRating: Rating = {
-		rating: 1200,
-		rd: 350
-	};
+	let newPlayerRating: Rating = defaultPlayerRating;
 	let newPlayerError: string = '';
 
 	let newSessionError: string = '';
@@ -67,17 +76,21 @@
 		}
 
 		try {
-			await addPlayer({ id: newId(), name: newPlayerName, rating: newPlayerRating } as Player).then(
-				async (_) => {
-					newPlayerModal?.close();
-					await fetchPlayers();
-					playerMap = get(playersStore);
-					sortPlayers();
-					newPlayerName = '';
-					newPlayerError = '';
-					newPlayerRating = newPlayerRating;
-				}
-			);
+			let player: Player = {
+				id: newId(),
+				name: newPlayerName,
+				rating: newPlayerRating,
+				matchStats: defaultPlayerMatchStats
+			};
+			await addPlayer(player).then(async (_) => {
+				newPlayerModal?.close();
+				await fetchPlayers();
+				playerMap = get(playersStore);
+				sortPlayers();
+				newPlayerName = '';
+				newPlayerError = '';
+				newPlayerRating = defaultPlayerRating;
+			});
 		} catch (error) {
 			newPlayerError = 'Failed to add player';
 			console.error(error);
@@ -133,6 +146,42 @@
 			console.error(newSessionError);
 		}
 	};
+
+	const countValidCombinations = (ratings: number[], ratingDifferenceLimit: number): number => {
+		let validCombinations = 0;
+
+		for (let i = 0; i < ratings.length; i++) {
+			for (let j = i + 1; j < ratings.length; j++) {
+				if (Math.abs(ratings[i] - ratings[j]) <= ratingDifferenceLimit) {
+					validCombinations++;
+				}
+			}
+		}
+
+		return validCombinations;
+	};
+
+	let statMeanRating = 0;
+	let statMedianRating = 0;
+	let statCombinations = 0;
+	let statValidCombinations = 0;
+	let orderedRatings: number[] = [];
+	let ratingDifferenceLimit = 300;
+
+	$: orderedRatings =
+		(playerMap &&
+			Object.values(playerMap)
+				.filter((p) => selectedPlayerIds.includes(p.id))
+				.map((p) => p.rating.rating)
+				.sort((a, b) => a - b)) ||
+		[];
+
+	$: statCombinations = combinations(orderedRatings.length, 2);
+	$: statValidCombinations = countValidCombinations(orderedRatings, ratingDifferenceLimit);
+
+	$: statMeanRating =
+		orderedRatings.reduce((acc, rating) => acc + rating, 0) / (orderedRatings.length || 1);
+	$: statMedianRating = median(orderedRatings);
 </script>
 
 {#if playerMap}
@@ -164,6 +213,17 @@
 					>
 				{/each}
 			</div>
+			<pre>
+=== Info ===
+Players: {selectedPlayerIds.length}
+Mean Rating: {Math.round(statMeanRating)}
+Median Rating: {Math.round(statMedianRating)}
+Std. Deviation: {Math.round(standardDeviation(orderedRatings))}
+
+Rating Difference Limit: {ratingDifferenceLimit}
+Valid Combinations: {statValidCombinations} / {statCombinations}
+</pre>
+
 			<div class="session-nav">
 				<button class="contrast outline" on:click={restartWizard}>Reset</button>
 				<button disabled={selectedPlayerIds.length < 4} on:click={() => step++}>Next</button>
@@ -193,6 +253,11 @@
 					<textarea rows={10} id="staticOrder" bind:value={staticOrder} />
 				{/if}
 			</form>
+
+			<pre>
+Info
+
+</pre>
 
 			<div class="session-nav">
 				<button class="outline" on:click={() => step--}>Back</button>
@@ -231,7 +296,7 @@
 			<label for="name">Name</label>
 			<input type="text" id="name" bind:value={newPlayerName} />
 			<label for="rating">Rating</label>
-			<input type="number" id="rating" bind:value={newPlayerRating} />
+			<input type="number" id="rating" bind:value={newPlayerRating.rating} />
 		</form>
 		<footer>
 			<button on:click={() => newPlayerModal?.close()} class="secondary"> Cancel </button>

@@ -1,10 +1,8 @@
 <script lang="ts">
 	import { copySeedings } from '$lib/rating';
-	import { addPlayer, playersStore } from '$lib/stores/player';
 	import { getSeedings } from '$lib/stores/seeding';
-	import type { Seeding, Player } from '$lib/types';
+	import type { Seeding } from '$lib/types';
 	import { onMount } from 'svelte';
-	import { get } from 'svelte/store';
 
 	let seedings: Seeding[] = [];
 

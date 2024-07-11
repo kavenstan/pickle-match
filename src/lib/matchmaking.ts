@@ -5,6 +5,7 @@ import { MatchmakingType } from '$lib/enums';
 import { newId } from '$lib/utils';
 import { updateState } from './stores/session';
 import { addMatches } from './stores/match';
+import { runSmartGenerator } from './matchup-generator';
 
 export const createRound = async (
 	session: Session,
@@ -87,6 +88,9 @@ const createMatches = (
 			break;
 		case 'Manual':
 			matchPairings = [];
+			break;
+		case 'Smart':
+			matchPairings = runSmartGenerator(players, session.id);
 			break;
 		default:
 			throw new Error('Unknown matchmaking algorithm');

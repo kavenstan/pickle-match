@@ -1,11 +1,11 @@
 <script lang="ts">
 	import type { Match, Session } from '$lib/types';
 	import { onMount } from 'svelte';
-	import { getSessions, updateState } from '$lib/stores/session';
+	import { deleteSession, getSessions, updateState } from '$lib/stores/session';
 	import { SessionStatus, ToastType } from '$lib/enums';
 	import { formatTimestamp } from '$lib/utils';
 	import { get } from 'svelte/store';
-	import { matchesStore, fetchMatchesForSession } from '$lib/stores/match';
+	import { matchesStore, fetchMatchesForSession, deleteSessionMatches } from '$lib/stores/match';
 	import { Loader } from '$lib/components';
 	import Round from '../matchmaking/Round.svelte';
 	import { PERMISSION_SESSION_WRITE, userSession, hasPermission } from '$lib/user';
@@ -85,13 +85,20 @@
 			{#if hasPermission($userSession, PERMISSION_SESSION_WRITE)}
 				<button on:click={async () => await setSessionActive(session)}>Set Active</button>
 				<button on:click={() => copyToClipboard(session)}>DUPR</button>
-				<br />
+				<br /><br />
 				<button on:click={async () => await resetRatings(session)}>Reset Ratings</button>
 				<button on:click={async () => await calculateRatings(session)}>Calcuate Ratings</button>
-				<br />
+				<br /><br />
 				<button on:click={async () => await resetStats(session)}>Reset Stats</button>
 				<button on:click={async () => await calculateStats(session)}>Calculate Stats</button>
 				<!-- <button on:click={async () => await fixSession(session.id)}>Fix session</button> -->
+				<br /><br />
+				<button class="danger" on:click={async () => await deleteSessionMatches(session.id)}
+					>Delete Matches</button
+				>
+				<button class="danger" on:click={async () => await deleteSession(session.id)}
+					>Delete Session</button
+				>
 			{/if}
 			{#if session?.state?.matchStats}
 				<SessionResultsStats {session} />
