@@ -109,10 +109,6 @@
 	};
 
 	const startSession = async () => {
-		let sessionPlayers = Object.values(playerMap).filter((player) =>
-			selectedPlayerIds.some((id) => id === player.id)
-		);
-
 		let newSession: Session = {
 			id: newId(),
 			config: {
@@ -128,7 +124,7 @@
 				currentRound: 1,
 				sitOutIndex: 0,
 				sitOutOrderPlayerIds: selectedPlayerIds.sort(() => 0.5 - Math.random()),
-				startRatings: mapPlayerNamesToRating(sessionPlayers),
+				startRatings: {},
 				endRatings: {},
 				matchStats: {}
 			},
