@@ -6,6 +6,7 @@
 	export let matches: Match[] = [];
 	export let editable: boolean = false;
 	export let currentRound: number = 1;
+	export let displayedRound: number = 1;
 
 	const groupByRound = (matches: Match[]): [number, Match[]][] => {
 		const grouped = matches.reduce(
@@ -22,23 +23,41 @@
 	};
 
 	let groupedMatches: [number, Match[]][];
-
 	$: groupedMatches = groupByRound(matches);
+
+	let roundCount = 1;
+	$: roundCount = groupedMatches.length;
+
+	const handleChangeDisplayedRound = (round: number) => {
+		displayedRound = round;
+	};
 </script>
 
 {#if groupedMatches}
 	<div class="round">
 		{#each groupedMatches as [round, roundMatches] (round)}
-			<div>
-				<div class="round-title">Round {round}</div>
-				{#each roundMatches as match}
-					{#if editable}
-						<EditMatch {match} />
-					{:else}
-						<ViewMatch {match} />
-					{/if}
-				{/each}
-			</div>
+			{#if displayedRound == 0 || displayedRound == round}
+				<div>
+					<div class="round-title">Round {round}</div>
+					{#each roundMatches as match}
+						{#if editable}
+							<EditMatch {match} />
+						{:else}
+							<ViewMatch {match} />
+						{/if}
+					{/each}
+					<div class="round-nav">
+						<button
+							disabled={displayedRound == 1}
+							on:click={() => handleChangeDisplayedRound(--displayedRound)}>&lt;</button
+						>
+						<button
+							disabled={displayedRound == roundCount}
+							on:click={() => handleChangeDisplayedRound(++displayedRound)}>&gt;</button
+						>
+					</div>
+				</div>
+			{/if}
 		{/each}
 		{#if currentRound > groupedMatches.length}
 			<div>
@@ -59,5 +78,9 @@
 
 		background-color: var(--light-color);
 		color: var(--primary-color);
+	}
+	.round-nav {
+		display: flex;
+		justify-content: space-between;
 	}
 </style>

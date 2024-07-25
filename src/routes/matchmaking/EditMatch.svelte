@@ -147,6 +147,10 @@
 	}
 	.team {
 		flex: 1;
+		line-height: 1.5rem;
+		white-space: nowrap;
+		overflow-x: hidden;
+		min-width: 100px;
 	}
 	.win {
 		border-color: green;

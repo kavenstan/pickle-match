@@ -16,7 +16,7 @@ export interface Seeding {
 
 export interface Rating {
 	rating: number;
-	rd: number
+	rd: number;
 }
 
 export interface PlayerMatchStats {
@@ -39,8 +39,9 @@ export interface Session {
 export interface Config {
 	courts: number;
 	matchmakingType: MatchmakingType;
-	ratingDiffLimit: number;
-	maxIterations: number;
+	teamRatingDiffLimit?: number;
+	matchRatingDiffLimit?: number;
+	allowRepeatPairings?: boolean;
 }
 
 export interface State {

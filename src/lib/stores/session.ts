@@ -43,7 +43,7 @@ export async function getSession(sessionId: string): Promise<Session> {
 export const deleteSession = async (sessionId: string) => {
 	const sessionRef = doc(collection(db, collection_name), sessionId);
 	await deleteDoc(sessionRef);
-}
+};
 
 export async function getSessions(): Promise<Session[]> {
 	const querySnapshot = await getDocs(
@@ -79,6 +79,11 @@ export async function getActiveSession(): Promise<Session | null> {
 	});
 
 	return session;
+}
+
+export async function fetchActiveSession() {
+	const session = await getActiveSession();
+	sessionStore.set(session);
 }
 
 export async function getSessionsByDate(timestamp: Timestamp): Promise<Session[]> {

@@ -13,6 +13,7 @@
 	import { setSeedings } from '$lib/stores/seeding';
 	import { calculateAllRatings, copySeedings, resetAllRatings, simulate } from '$lib/rating';
 	import { resetAllStats, calculateAllStats } from '$lib/stats';
+	import { runMatchmakingTest, runNewTest } from './matchmakingTest';
 	// import { simulate } from '$lib/elo';
 
 	let file: File | null = null;
@@ -315,6 +316,12 @@
 			<button on:click={async () => await resetAllPlayerStats()}>Reset All Player Stats</button>
 			<button on:click={async () => await resetAllStats()}>Reset All Stats</button>
 			<button on:click={async () => await calculateAllStats()}>Calculate All Stats</button>
+			<br />
+			<br />
+			<button on:click={async () => runMatchmakingTest()}>Run Matchmaking Test</button>
+			<br />
+			<br />
+			<button on:click={async () => runNewTest()}>Run Pairing Test</button>
 		{/if}
 
 		<br />

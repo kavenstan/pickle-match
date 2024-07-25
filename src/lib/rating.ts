@@ -49,12 +49,12 @@ export const calculateRatings = async (session: Session) => {
 
 	console.table(ratingMap);
 
-	if (Object.keys(session.state.startRatings ?? {}).length > 0) {
-		addInfoToast('Start ratings found - skipping ratings calculation');
+	if (Object.keys(session.state.endRatings ?? {}).length > 0) {
+		addInfoToast('End ratings found - skipping ratings calculation');
 		return;
 	}
 
-	const startRatingMap = { ...ratingMap };
+	const startRatingMap = { ...session.state.endRatings };
 
 	let sessionMatches = await getMatchesForSession(session.id);
 

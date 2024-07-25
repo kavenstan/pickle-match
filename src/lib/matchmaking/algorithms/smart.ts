@@ -1,6 +1,5 @@
 // Describes a player
 class Player {
-
 	name: string;
 	rank: number;
 	byeCount: number;
@@ -13,8 +12,12 @@ class Player {
 		this.gameCount = 0;
 	}
 
-	getName() { return this.name; }
-	getRank() { return this.rank; }
+	getName() {
+		return this.name;
+	}
+	getRank() {
+		return this.rank;
+	}
 	addGame() {
 		this.gameCount++;
 	}
@@ -22,7 +25,6 @@ class Player {
 
 // Describes a Pair of players which can participate in a Match
 class Pair {
-
 	player1: Player;
 	player2: Player;
 	pairRank: number;
@@ -51,7 +53,6 @@ class Pair {
 	}
 }
 
-
 // Describes a Match between two Pairs
 class Match {
 	pair1: Pair;
@@ -76,10 +77,18 @@ class Match {
 	}
 
 	getMatchDescription() {
-		return this.pair1.getPlayer1Name() + "|" +
-			this.pair1.getPlayer2Name() + " vs " +
-			this.pair2.getPlayer1Name() + "|" + this.pair2.getPlayer2Name() +
-			" (" + this.rankDiff + ")";
+		return (
+			this.pair1.getPlayer1Name() +
+			'|' +
+			this.pair1.getPlayer2Name() +
+			' vs ' +
+			this.pair2.getPlayer1Name() +
+			'|' +
+			this.pair2.getPlayer2Name() +
+			' (' +
+			this.rankDiff +
+			')'
+		);
 	}
 
 	// do the given matches clash on scheduled players?
@@ -209,20 +218,17 @@ const MAX_ALLOWED_RDIFF = 20; // just going to filter any heavily unbalanced mat
 // const playerList: Player[] = [];
 
 import type { Player as AppPlayer, Match as AppMatch } from '$lib/types';
-import { newId } from './utils';
+import { newId } from '../../utils';
 
 export const runSmartGenerator = (appPlayers: AppPlayer[], sessionId: string) => {
-
 	let appMatches: AppMatch[] = [];
 
 	let playerList: Player[] = appPlayers
 		.sort((a, b) => b.rating.rating - a.rating.rating)
-		.map((p, i) =>
-			new Player(p.id, i)
-		);
+		.map((p, i) => new Player(p.id, i));
 
 	MAX_ROUNDS = playerList.length + 3; // generate 3 round more than we have players - stupid rounds can be dropped
-	console.log("Adjusted MAX_ROUNDS is now : " + MAX_ROUNDS);
+	console.log('Adjusted MAX_ROUNDS is now : ' + MAX_ROUNDS);
 
 	// generating ALL possible pairings now from the playerList
 	// the Player & Pair objects will handle ranking etc
@@ -235,7 +241,6 @@ export const runSmartGenerator = (appPlayers: AppPlayer[], sessionId: string) =>
 	var matchCount = 0;
 	for (var i = 0; i < pairingsList.length; i++) {
 		for (var j = i + 1; j < pairingsList.length; j++) {
-
 			// Take the current Pairs on the indexes
 			let p1 = pairingsList[i];
 			let p2 = pairingsList[j];
@@ -266,27 +271,27 @@ export const runSmartGenerator = (appPlayers: AppPlayer[], sessionId: string) =>
 	}
 
 	// DEBUG - can remove later...
-	console.log("Generated " + matchCount + " total matches!");
+	console.log('Generated ' + matchCount + ' total matches!');
 	for (const k in mappedMatches) {
-		console.log(k + " --> " + mappedMatches[k].length);
+		console.log(k + ' --> ' + mappedMatches[k].length);
 	}
 
 	// Need this? Store the match list to a file?
-	//fs.writeFile("matches-out.json", 
+	//fs.writeFile("matches-out.json",
 	//	JSON.stringify(mappedMatches, null, 2),
 	//	err => {
 	//		if(err) throw err;
-	//		
+	//
 	//		console.log("Wrote matches file!");
 	//	});
 
 	interface Schedule {
 		courtCount: number;
-		rounds: Round[],
-		maxRounds: number
+		rounds: Round[];
+		maxRounds: number;
 	}
 
-	// figure out how many courts we need 	
+	// figure out how many courts we need
 	let schedule: Schedule = {
 		courtCount: Math.trunc(playerList.length / 4),
 		rounds: [],
@@ -298,12 +303,12 @@ export const runSmartGenerator = (appPlayers: AppPlayer[], sessionId: string) =>
 		schedule.courtCount = MAX_COURTS;
 	}
 
-	// store Rounds as a list 
+	// store Rounds as a list
 	console.log(schedule);
 
 	// Now do scheduling...
 	for (let cr = 0; cr < schedule.maxRounds; cr++) {
-		console.log("Next round..." + cr);
+		console.log('Next round...' + cr);
 		var currentRound = new Round(schedule.courtCount);
 		schedule.rounds.push(currentRound);
 		let roundPicks: Player[] = [];
@@ -319,7 +324,7 @@ export const runSmartGenerator = (appPlayers: AppPlayer[], sessionId: string) =>
 		// on the current player order before we start selections / scheduling courts
 		// - trying this to prevent the list beginning to flip-flop between *dead* states?
 		if (playerList.length % cr == 0) {
-			console.log("...................... NUDGE ........................");
+			console.log('...................... NUDGE ........................');
 			// swap two random players on the list every time we hit this - trying to avoid dead states
 			let l = playerList.length;
 			let s1 = Math.floor(Math.random() * l);
@@ -331,7 +336,7 @@ export const runSmartGenerator = (appPlayers: AppPlayer[], sessionId: string) =>
 		}
 
 		for (let mcr = 0; mcr < schedule.courtCount; mcr++) {
-			console.log("Court --> " + mcr);
+			console.log('Court --> ' + mcr);
 			var scheduled = false;
 			var shuffleCount = 0;
 			var MAX_SHUFFLES = 20; // MAX number of times we'll shuffle and take our chances
@@ -344,8 +349,7 @@ export const runSmartGenerator = (appPlayers: AppPlayer[], sessionId: string) =>
 
 					// now try schedule again after the shuffle
 					scheduled = doSchedule(playerList, -1, false, roundPicks, currentRound);
-				}
-				else {
+				} else {
 					scheduled = true;
 				}
 				shuffleCount++;
@@ -353,8 +357,7 @@ export const runSmartGenerator = (appPlayers: AppPlayer[], sessionId: string) =>
 
 			// STILL not scheduled - last chance, brute force & take ANYTHING that will fit
 			if (!scheduled) {
-
-				console.log("------- GAP FILL!! -----");
+				console.log('------- GAP FILL!! -----');
 				// sort first - prioritize players with least games
 				sortEntries(playerList);
 				// select first 4, find ANY game for them
@@ -363,7 +366,7 @@ export const runSmartGenerator = (appPlayers: AppPlayer[], sessionId: string) =>
 					let gapPlayers = pickNext4(playerList, gapPlayerStart);
 					scheduled = scheduleGroup(gapPlayers, roundPicks, currentRound);
 					gapPlayerStart++; // move up one if there was no match found
-					// shifting the player group window to the right by one position (but not off the end) 
+					// shifting the player group window to the right by one position (but not off the end)
 				}
 			}
 
@@ -371,10 +374,10 @@ export const runSmartGenerator = (appPlayers: AppPlayer[], sessionId: string) =>
 				// Giving up now - human intervention required to fix this!
 				// At the end we print the round showing the courts scheduled & the remainder players
 				// so should be enough info for a person to resolve manually if needed.....
-				console.log("Failed to complete all courts - real eyes needed here");
+				console.log('Failed to complete all courts - real eyes needed here');
 			}
 		}
-		console.log("Courts should be filled..."); // may not be entirely true
+		console.log('Courts should be filled...'); // may not be entirely true
 
 		// update notpicked for all those not chosen in this round
 		for (const z in playerList) {
@@ -382,36 +385,42 @@ export const runSmartGenerator = (appPlayers: AppPlayer[], sessionId: string) =>
 				playerList[z].byeCount++;
 			}
 		}
-		console.log("Round completed!");
+		console.log('Round completed!');
 	}
 
 	//console.log(JSON.stringify(schedule, null, 2));
 	for (const [idx, f] of schedule.rounds.entries()) {
 		//console.log(schedule.rounds[f]);
-		console.log("Round :" + f);
+		console.log('Round :' + f);
 		for (let g = 0; g < f.courts.length; g += 2) {
 			let e1 = f.courts[g];
 			let e2 = f.courts[g + 1];
 			if (e1 != null && e2 != null) {
-
 				appMatches.push(matchToAppMatch(e1, idx));
 				appMatches.push(matchToAppMatch(e2, idx));
 
-				console.log("\tCourt " + (g + 1) + ": " + e1.getMatchDescription() +
-					"\tCourt " + (g + 2) + ": " + e2.getMatchDescription());
-			}
-			else if (e1 != null && e2 == null) {
+				console.log(
+					'\tCourt ' +
+						(g + 1) +
+						': ' +
+						e1.getMatchDescription() +
+						'\tCourt ' +
+						(g + 2) +
+						': ' +
+						e2.getMatchDescription()
+				);
+			} else if (e1 != null && e2 == null) {
 				// in case there's a gap in the courts layout...
-				console.log("\tCourt " + (g + 1) + ": " + e1.getMatchDescription());
+				console.log('\tCourt ' + (g + 1) + ': ' + e1.getMatchDescription());
 				appMatches.push(matchToAppMatch(e1, idx));
 			}
 		}
 
-		console.log("Sitting for this round --> \t");
+		console.log('Sitting for this round --> \t');
 		console.log(f.getRemainderPlayers(playerList));
 		console.log();
 	}
-	console.log("=======");
+	console.log('=======');
 	console.log(playerList);
 	return appMatches;
 
@@ -425,7 +434,7 @@ export const runSmartGenerator = (appPlayers: AppPlayer[], sessionId: string) =>
 			team2Score: 0,
 			round,
 			ratingChanges: {}
-		}
+		};
 
 		return appMatch;
 	}
@@ -435,21 +444,25 @@ export const runSmartGenerator = (appPlayers: AppPlayer[], sessionId: string) =>
 	// ***********************************************
 
 	// Pick 4 starting at the given position in the given list, pass to the schedule call & return the result
-	function doSchedule(availablePlayers: Player[], startPos: number, callerStartPosGiven: boolean, roundPicks: Player[], currentRound: Round) {
-
+	function doSchedule(
+		availablePlayers: Player[],
+		startPos: number,
+		callerStartPosGiven: boolean,
+		roundPicks: Player[],
+		currentRound: Round
+	) {
 		let playerStart = 0 + roundPicks.length;
 		if (callerStartPosGiven) {
 			playerStart = startPos;
 		}
 
 		let pickedPlayers = pickNext4(availablePlayers, playerStart);
-		return scheduleGroup(pickedPlayers, roundPicks, currentRound)
+		return scheduleGroup(pickedPlayers, roundPicks, currentRound);
 	}
 
 	// Try to locate the fairest match for the given players
 	// Return the result to the caller
 	function scheduleGroup(givenPlayers: Player[], roundPicks: Player[], currentRound: Round) {
-
 		let fmatch = getFairestMatchForTargetPlayers(mappedMatches, givenPlayers);
 		let result = currentRound.scheduleMatch(fmatch);
 		if (result) {
@@ -458,18 +471,16 @@ export const runSmartGenerator = (appPlayers: AppPlayer[], sessionId: string) =>
 				roundPicks.push(givenPlayers[o]);
 			}
 			return true;
-		}
-		else {
-
+		} else {
 			return false;
 		}
 	}
 
 	function shufflePlayerDeck(array: Player[]) {
-		console.log("++++++++++++ SHUFFLE +++++++++++++");
+		console.log('++++++++++++ SHUFFLE +++++++++++++');
 		for (var i = array.length - 1; i > 0; i--) {
 			var rand = Math.floor(Math.random() * (i + 1));
-			[array[i], array[rand]] = [array[rand], array[i]]
+			[array[i], array[rand]] = [array[rand], array[i]];
 		}
 	}
 
@@ -481,7 +492,9 @@ export const runSmartGenerator = (appPlayers: AppPlayer[], sessionId: string) =>
 			let l = matchList.length;
 			let p = Math.floor(Math.random() * l);
 			let match = matchList[p];
-			let fMatchList = matchList.filter(function (e) { return e !== match });
+			let fMatchList = matchList.filter(function (e) {
+				return e !== match;
+			});
 			matchMap[k] = fMatchList;
 			return match;
 		}
@@ -489,7 +502,10 @@ export const runSmartGenerator = (appPlayers: AppPlayer[], sessionId: string) =>
 	}
 
 	// Find the fairest match which includes all of the given players
-	function getFairestMatchForTargetPlayers(matchMap: Record<string, Match[]>, players: Player[]): Match | null {
+	function getFairestMatchForTargetPlayers(
+		matchMap: Record<string, Match[]>,
+		players: Player[]
+	): Match | null {
 		//console.log("Find match for ..." + JSON.stringify(players));
 		let checkCount = 0; // how many matches we checked
 		for (var i = 0; i <= MAX_ALLOWED_RDIFF; i++) {
@@ -510,7 +526,9 @@ export const runSmartGenerator = (appPlayers: AppPlayer[], sessionId: string) =>
 
 				if (found && match != null) {
 					// Remove the target match by filtering it out of the array
-					let fMatchList = matchList.filter(function (e) { return e !== match });
+					let fMatchList = matchList.filter(function (e) {
+						return e !== match;
+					});
 					matchMap[k] = fMatchList;
 					//console.log("returning...." + match.getMatchDescription());
 					return match;
@@ -518,23 +536,27 @@ export const runSmartGenerator = (appPlayers: AppPlayer[], sessionId: string) =>
 			}
 		}
 		// No match at all can be found for these players! - Would need to increase the MAX_RDiff filter value?
-		console.log("getFairestMatchForTargetPlayers: No fair match! (after " + checkCount + " checks)");
+		console.log(
+			'getFairestMatchForTargetPlayers: No fair match! (after ' + checkCount + ' checks)'
+		);
 		console.log(players);
 		return null;
 	}
 
 	// helper to make sure keys for match map are created correctly everywhere
 	function makeMapKey(rdiff: number) {
-		return "rdiff:" + Math.abs(rdiff);
+		return 'rdiff:' + Math.abs(rdiff);
 	}
 
 	// confirms no player the same on both sides - combinations loop giving players playing against themselves....?
 	// Quick and dirty fix is check & ignore...
 	function noPlayersInCommon(pair1: Pair, pair2: Pair) {
-		return (pair1.getPlayer1Name() != pair2.getPlayer1Name()
-			&& pair1.getPlayer1Name() != pair2.getPlayer2Name()
-			&& pair1.getPlayer2Name() != pair2.getPlayer1Name()
-			&& pair1.getPlayer2Name() != pair2.getPlayer2Name());
+		return (
+			pair1.getPlayer1Name() != pair2.getPlayer1Name() &&
+			pair1.getPlayer1Name() != pair2.getPlayer2Name() &&
+			pair1.getPlayer2Name() != pair2.getPlayer1Name() &&
+			pair1.getPlayer2Name() != pair2.getPlayer2Name()
+		);
 	}
 
 	// Sort function for the playerList
@@ -543,8 +565,7 @@ export const runSmartGenerator = (appPlayers: AppPlayer[], sessionId: string) =>
 		arr.sort(function (o1, o2) {
 			if (o1.gameCount != o2.gameCount) {
 				return o1.gameCount - o2.gameCount;
-			}
-			else {
+			} else {
 				// if equal games, sort descending on byes
 				return o2.byeCount - o1.byeCount;
 			}
@@ -559,7 +580,7 @@ export const runSmartGenerator = (appPlayers: AppPlayer[], sessionId: string) =>
 	function pickNextGroup(srcArr: Player[], startFrom: number, groupSize: number) {
 		// we will return this when it's got groupSize entries in it
 		let ret = [];
-		for (let i = startFrom; i < (groupSize + startFrom); i++) {
+		for (let i = startFrom; i < groupSize + startFrom; i++) {
 			ret.push(srcArr[i]);
 		}
 		return ret;
@@ -575,6 +596,4 @@ export const runSmartGenerator = (appPlayers: AppPlayer[], sessionId: string) =>
 		}
 		return pairList;
 	}
-
-}
-
+};

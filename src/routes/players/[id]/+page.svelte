@@ -67,16 +67,6 @@
 					}
 				]
 			}
-			// options: {
-			// 	scales: {
-			// 		x: {
-			// 			type: 'time',
-			// 			time: {
-			// 				unit: 'month'
-			// 			}
-			// 		}
-			// 	}
-			// }
 		});
 	});
 </script>

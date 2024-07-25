@@ -1,7 +1,7 @@
 <script lang="ts">
-	import type { Player, Session, Rating } from '$lib/types';
+	import type { Player, Session, Rating, Match } from '$lib/types';
 	import { onMount } from 'svelte';
-	import { addSession } from '$lib/stores/session';
+	import { addSession, fetchActiveSession } from '$lib/stores/session';
 	import {
 		addPlayer,
 		playersStore,
@@ -10,17 +10,12 @@
 		defaultPlayerRating
 	} from '$lib/stores/player';
 	import { MatchmakingType, SessionStatus, ToastType } from '$lib/enums';
-	import {
-		combinations,
-		mapPlayerNamesToRating,
-		median,
-		newId,
-		standardDeviation
-	} from '$lib/utils';
+	import { median, newId, standardDeviation } from '$lib/utils';
 	import { Timestamp } from 'firebase/firestore';
-	import { goto } from '$app/navigation';
 	import { addToast } from '$lib/ui';
 	import { get } from 'svelte/store';
+	import { createRound, type RoundResult } from '$lib/matchmaking/matchmaking';
+	import PreviewMatch from '$lib/components/PreviewMatch.svelte';
 
 	let playerMap: Record<string, Player>;
 	let sortedPlayers: Player[] = [];
@@ -36,8 +31,17 @@
 	// Settings
 	let courts: number = 4;
 	let matchmakingAlgorithm: MatchmakingType = MatchmakingType.Balanced;
-	let ratingDiffLimit = 100;
-	let maxIterations = 10000;
+
+	// Criteria
+	let teamRatingDiffLimit = 600;
+	let matchRatingDiffLimit = 200;
+	let allowRepeatPairings = false;
+
+	// Previerw
+	let previewSession: Session;
+	let previewResult: RoundResult;
+	let previewMatches: Match[] = [];
+
 	let staticOrder = '{}';
 
 	let step: number = 1;
@@ -46,6 +50,8 @@
 	onMount(() => {
 		playerMap = get(playersStore);
 		sortPlayers();
+		// Testing - prepick players
+		// selectedPlayerIds = sortedPlayers.slice(0, 14).map((x) => x.id);
 	});
 
 	const sortPlayers = (sort: string = 'name') => {
@@ -105,17 +111,74 @@
 	};
 
 	const refreshPreview = async () => {
-		addToast({ message: 'Not yet implemented' });
+		let startRatings: Record<string, Rating> = Object.values(playerMap)
+			.filter((player) => selectedPlayerIds.includes(player.id))
+			.reduce(
+				(acc, player) => {
+					acc[player.id] = { rating: player.rating.rating, rd: player.rating.rd };
+					return acc;
+				},
+				{} as Record<string, Rating>
+			);
+
+		previewSession = {
+			config: {
+				courts: 4,
+				matchmakingType: MatchmakingType.Balanced,
+				teamRatingDiffLimit,
+				matchRatingDiffLimit,
+				allowRepeatPairings
+			},
+			id: '',
+			date: null as any,
+			location: '',
+			state: {
+				status: SessionStatus.Created,
+				currentRound: 0,
+				activePlayerIds: selectedPlayerIds,
+				allPlayerIds: selectedPlayerIds,
+				sitOutOrderPlayerIds: selectedPlayerIds.sort(() => 0.5 - Math.random()),
+				sitOutIndex: 0,
+				startRatings,
+				endRatings: {},
+				matchStats: {}
+			}
+		};
+
+		previewMatches = [];
+		previewResult = await createRound(previewSession, []);
+
+		if (!previewResult.error) {
+			previewSession.state.sitOutIndex = previewResult.state.sitOutIndex;
+			previewSession.state.currentRound = previewResult.state.currentRound;
+		}
+	};
+
+	const nextPreviewRound = async () => {
+		console.log(previewSession.config);
+		previewMatches = previewMatches.concat(previewResult.matches!);
+		previewResult = await createRound(previewSession, previewMatches);
 	};
 
 	const startSession = async () => {
+		let startRatings: Record<string, Rating> = Object.values(playerMap)
+			.filter((player) => selectedPlayerIds.includes(player.id))
+			.reduce(
+				(acc, player) => {
+					acc[player.id] = { rating: player.rating.rating, rd: player.rating.rd };
+					return acc;
+				},
+				{} as Record<string, Rating>
+			);
+
 		let newSession: Session = {
 			id: newId(),
 			config: {
 				courts: courts,
 				matchmakingType: matchmakingAlgorithm,
-				ratingDiffLimit: 100,
-				maxIterations: 1000
+				teamRatingDiffLimit,
+				matchRatingDiffLimit,
+				allowRepeatPairings
 			},
 			state: {
 				activePlayerIds: selectedPlayerIds,
@@ -124,7 +187,7 @@
 				currentRound: 1,
 				sitOutIndex: 0,
 				sitOutOrderPlayerIds: selectedPlayerIds.sort(() => 0.5 - Math.random()),
-				startRatings: {},
+				startRatings,
 				endRatings: {},
 				matchStats: {}
 			},
@@ -133,9 +196,9 @@
 		};
 
 		try {
-			await addSession(newSession).then((_) => {
+			await addSession(newSession).then(async (_) => {
 				addToast({ message: 'Session Created', type: ToastType.Success });
-				goto('/matchmaking');
+				await fetchActiveSession();
 			});
 		} catch (error) {
 			newSessionError = 'Failed to create session';
@@ -143,26 +206,25 @@
 		}
 	};
 
-	const countValidCombinations = (ratings: number[], ratingDifferenceLimit: number): number => {
-		let validCombinations = 0;
+	const handleAllowRepeatPairings = async () => {
+		previewSession.config.allowRepeatPairings! = true;
+		await nextPreviewRound();
+	};
 
-		for (let i = 0; i < ratings.length; i++) {
-			for (let j = i + 1; j < ratings.length; j++) {
-				if (Math.abs(ratings[i] - ratings[j]) <= ratingDifferenceLimit) {
-					validCombinations++;
-				}
-			}
-		}
+	const handleIncreaseVariance = async () => {
+		previewSession.config.teamRatingDiffLimit! *= 1.25;
+		previewSession.config.matchRatingDiffLimit! *= 1.25;
+		await nextPreviewRound();
+	};
 
-		return validCombinations;
+	const moveToPreview = async () => {
+		await refreshPreview();
+		step++;
 	};
 
 	let statMeanRating = 0;
 	let statMedianRating = 0;
-	let statCombinations = 0;
-	let statValidCombinations = 0;
 	let orderedRatings: number[] = [];
-	let ratingDifferenceLimit = 300;
 
 	$: orderedRatings =
 		(playerMap &&
@@ -171,9 +233,6 @@
 				.map((p) => p.rating.rating)
 				.sort((a, b) => a - b)) ||
 		[];
-
-	$: statCombinations = combinations(orderedRatings.length, 2);
-	$: statValidCombinations = countValidCombinations(orderedRatings, ratingDifferenceLimit);
 
 	$: statMeanRating =
 		orderedRatings.reduce((acc, rating) => acc + rating, 0) / (orderedRatings.length || 1);
@@ -209,17 +268,6 @@
 					>
 				{/each}
 			</div>
-			<pre>
-=== Info ===
-Players: {selectedPlayerIds.length}
-Mean Rating: {Math.round(statMeanRating)}
-Median Rating: {Math.round(statMedianRating)}
-Std. Deviation: {Math.round(standardDeviation(orderedRatings))}
-
-Rating Difference Limit: {ratingDifferenceLimit}
-Valid Combinations: {statValidCombinations} / {statCombinations}
-</pre>
-
 			<div class="session-nav">
 				<button class="contrast outline" on:click={restartWizard}>Reset</button>
 				<button disabled={selectedPlayerIds.length < 4} on:click={() => step++}>Next</button>
@@ -238,12 +286,22 @@ Valid Combinations: {statValidCombinations} / {statCombinations}
 				</select>
 				<label for="courts">Courts</label>
 				<input type="text" id="courts" bind:value={courts} />
+
 				{#if matchmakingAlgorithm === MatchmakingType.Balanced}
-					<label for="ratingDiffLimit">Rating Range</label>
-					<input type="text" id="ratingDiffLimit" bind:value={ratingDiffLimit} />
-					<label for="maxIterations">Max Iterations</label>
-					<input type="text" id="maxIterations" bind:value={maxIterations} />
+					<label for="teamRatingDiffLimit">Team Rating Range</label>
+					<input type="text" id="teamRatingDiffLimit" bind:value={teamRatingDiffLimit} />
+					<label for="matchRatingDiffLimit">Match Rating Range</label>
+					<input type="text" id="matchRatingDiffLimit" bind:value={matchRatingDiffLimit} />
+					<label for="allowRepeatPairings">
+						<input
+							type="checkbox"
+							role="switch"
+							id="allowRepeatPairings"
+							bind:value={allowRepeatPairings}
+						/>Allow Repeat Pairings
+					</label>
 				{/if}
+
 				{#if matchmakingAlgorithm === MatchmakingType.Static}
 					<label for="staticOrder">Matches (JSON)</label>
 					<textarea rows={10} id="staticOrder" bind:value={staticOrder} />
@@ -251,17 +309,16 @@ Valid Combinations: {statValidCombinations} / {statCombinations}
 			</form>
 
 			<pre>
-Info
-
-</pre>
+=== Info ===
+Players: {selectedPlayerIds.length}
+Mean Rating: {Math.round(statMeanRating)}
+Median Rating: {Math.round(statMedianRating)}
+Std. Deviation: {Math.round(standardDeviation(orderedRatings))}
+				</pre>
 
 			<div class="session-nav">
 				<button class="outline" on:click={() => step--}>Back</button>
-				<button
-					on:click={() => {
-						step++;
-					}}>Next</button
-				>
+				<button on:click={async () => await moveToPreview()}>Next</button>
 				{#if newSessionError}
 					<p class="error">{newSessionError}</p>
 				{/if}
@@ -270,10 +327,44 @@ Info
 
 		{#if step === 3}
 			<h3>Preview</h3>
-			<div class="session-preview"></div>
-			<div>
-				<button on:click={() => refreshPreview()}>Refresh</button>
-			</div>
+			{#if previewResult?.error}
+				<div class="error">
+					Error: {previewResult.error}
+					<br />
+					<button on:click={async () => await handleAllowRepeatPairings()}
+						>Allow Repeat Pairings</button
+					>
+					<br />
+					<button on:click={async () => await handleIncreaseVariance()}
+						>Increase allowed variance</button
+					>
+				</div>
+			{:else}
+				<div class="session-preview">
+					{#if previewResult?.matches}
+						{#each previewResult?.matches as match}
+							<PreviewMatch {match} />
+						{/each}
+					{/if}
+				</div>
+				{#if previewResult?.sitOutPlayerIds}
+					<div class="sit-out">
+						Sitting Out:
+						{#each previewResult?.sitOutPlayerIds as sitOutPlayerId, index}
+							<span
+								>{playerMap[sitOutPlayerId]
+									.name}{#if index < previewResult.sitOutPlayerIds.length - 1},
+								{/if}</span
+							>
+						{/each}
+					</div>
+				{/if}
+				<div>
+					<button on:click={() => refreshPreview()}>Refresh</button>
+					<button on:click={() => nextPreviewRound()}>Next Round</button>
+				</div>
+			{/if}
+			<br />
 			<div class="session-nav">
 				<button class="outline" on:click={() => step--}>Back</button>
 				<button on:click={() => startSession()}>Start!</button>
@@ -331,6 +422,10 @@ Info
 
 	.step-indicator.active {
 		background-color: var(--secondary-color);
+	}
+
+	.sit-out {
+		margin: 1rem 0;
 	}
 
 	.players {

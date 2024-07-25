@@ -9,20 +9,17 @@
 	import { addMatch, subscribeToMatches, sessionMatchesStore, addMatches } from '$lib/stores/match';
 	import { goto } from '$app/navigation';
 	import { addToast } from '$lib/ui';
-	import { createRound } from '$lib/matchmaking';
-	import { playersStore } from '$lib/stores/player';
-	import { get } from 'svelte/store';
+	import { createRound, type RoundResult } from '$lib/matchmaking/matchmaking';
 
 	export let sessionId: string;
-	let allPlayers: Player[];
 	let session: Session | null;
 	let sessionMatches: Match[] | null;
 	let pendingMatches: Match[] = [];
 	let availablePlayerIds: string[];
+	let roundResult: RoundResult;
+	let displayedRound = 1;
 
 	onMount(() => {
-		allPlayers = Object.values(get(playersStore));
-
 		const unsubscribeSession = subscribeToSession(sessionId);
 		const unsubscribeSessionStore = sessionStore.subscribe((data) => {
 			session = data as Session;
@@ -49,8 +46,27 @@
 				currentRound: session.state.currentRound++
 			});
 		} else {
-			await createRound(session!, sessionMatches!, allPlayers);
+			roundResult = await createRound(session!, sessionMatches!);
+			if (!roundResult.error) {
+				await updateState(session!.id, {
+					currentRound: roundResult.state.currentRound,
+					sitOutIndex: roundResult.state.sitOutIndex
+				});
+				await addMatches(roundResult.matches);
+				displayedRound = roundResult.state.currentRound - 1;
+			}
 		}
+	};
+
+	const handleAllowRepeatPairings = async () => {
+		session!.config.allowRepeatPairings! = true;
+		await startNewRound();
+	};
+
+	const handleIncreaseVariance = async () => {
+		session!.config.teamRatingDiffLimit! *= 1.25;
+		session!.config.matchRatingDiffLimit! *= 1.25;
+		await startNewRound();
 	};
 
 	const addManualMatch = async () => {
@@ -88,36 +104,60 @@
 			});
 		availablePlayerIds = session!.state.activePlayerIds.filter((id) => !roundPlayerIds.has(id));
 	}
+
+	$: if (session) {
+		console.log(session.id);
+	}
 </script>
 
 {#if session}
 	<div class="session">
-		{#if !sessionMatches || sessionMatches.length === 0}
-			<p>No rounds found</p>
-		{:else if pendingMatches.length === 0}
-			<div class="rounds">
-				<Round matches={sessionMatches} editable={true} currentRound={session.state.currentRound} />
+		{#if roundResult?.error}
+			<div class="error">
+				Error: {roundResult.error}
+				<br />
+				<button on:click={async () => await handleAllowRepeatPairings()}
+					>Allow Repeat Pairings</button
+				>
+				<br />
+				<button on:click={async () => await handleIncreaseVariance()}
+					>Increase allowed variance</button
+				>
 			</div>
-		{/if}
-
-		{#if session.config.matchmakingType === MatchmakingType.Manual}
-			{#if pendingMatches.length === 0}
-				<button on:click={async () => await addManualMatch()}>Add Match</button>
-			{:else}
-				{#each pendingMatches as pendingMatch}
-					<CreateMatch
-						matchId={pendingMatch.id}
-						{availablePlayerIds}
-						round={session.state.currentRound}
+		{:else}
+			{#if !sessionMatches || sessionMatches.length === 0}
+				<p>No rounds found</p>
+			{:else if pendingMatches.length === 0}
+				<div class="rounds">
+					<Round
+						matches={sessionMatches}
+						editable={true}
+						currentRound={session.state.currentRound - 1}
+						{displayedRound}
 					/>
-				{/each}
+				</div>
+			{/if}
+
+			{#if session.config.matchmakingType === MatchmakingType.Manual}
+				{#if pendingMatches.length === 0}
+					<button on:click={async () => await addManualMatch()}>Add Match</button>
+				{:else}
+					{#each pendingMatches as pendingMatch}
+						<CreateMatch
+							matchId={pendingMatch.id}
+							{availablePlayerIds}
+							round={session.state.currentRound}
+						/>
+					{/each}
+				{/if}
+			{/if}
+
+			{#if session.config.matchmakingType !== MatchmakingType.Manual || pendingMatches.length == 0}
+				<button on:click={async () => startNewRound()}>Create New Round </button>
 			{/if}
 		{/if}
-
+		<br /><br />
 		{#if session.config.matchmakingType !== MatchmakingType.Manual || pendingMatches.length == 0}
-			<button on:click={async () => startNewRound()}
-				>Create Round {session.state.currentRound + 1}</button
-			>
 			<button on:click={async () => endSession()}>End Session</button>
 		{/if}
 	</div>
