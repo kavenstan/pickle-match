@@ -9,7 +9,14 @@
 	import { addMatch, subscribeToMatches, sessionMatchesStore, addMatches } from '$lib/stores/match';
 	import { goto } from '$app/navigation';
 	import { addToast } from '$lib/ui';
-	import { createRound, type RoundResult } from '$lib/matchmaking/matchmaking';
+	import {
+		activateSessionPlayer,
+		createRound,
+		deactiveSessionPlayer,
+		type RoundResult
+	} from '$lib/matchmaking/matchmaking';
+	import { playersStore } from '$lib/stores/player';
+	import { get } from 'svelte/store';
 
 	export let sessionId: string;
 	let session: Session | null;
@@ -18,8 +25,12 @@
 	let availablePlayerIds: string[];
 	let roundResult: RoundResult;
 	let displayedRound = 1;
+	let showSettings: boolean = false;
+	let playerMap: Record<string, Player>;
 
 	onMount(() => {
+		playerMap = get(playersStore);
+
 		const unsubscribeSession = subscribeToSession(sessionId);
 		const unsubscribeSessionStore = sessionStore.subscribe((data) => {
 			session = data as Session;
@@ -38,6 +49,18 @@
 			unsubscribeMatchStore();
 		};
 	});
+
+	const toggleSettings = () => {
+		showSettings = !showSettings;
+	};
+
+	const toggleActive = (playerId: string) => {
+		if (session!.state.activePlayerIds.includes(playerId)) {
+			deactiveSessionPlayer(session!, playerId);
+		} else {
+			activateSessionPlayer(session!, playerId);
+		}
+	};
 
 	const startNewRound = async () => {
 		if (session?.config.matchmakingType === MatchmakingType.Manual) {
@@ -159,6 +182,44 @@
 		<br /><br />
 		{#if session.config.matchmakingType !== MatchmakingType.Manual || pendingMatches.length == 0}
 			<button on:click={async () => endSession()}>End Session</button>
+		{/if}
+
+		<br /><br />
+
+		<button on:click={toggleSettings}>Settings</button>
+		{#if showSettings}
+			<div>
+				<form>
+					<label for="teamRatingDiffLimit">Team Rating Range</label>
+					<input
+						type="text"
+						id="teamRatingDiffLimit"
+						bind:value={session.config.teamRatingDiffLimit}
+					/>
+					<label for="matchRatingDiffLimit">Match Rating Range</label>
+					<input
+						type="text"
+						id="matchRatingDiffLimit"
+						bind:value={session.config.matchRatingDiffLimit}
+					/>
+					<label for="allowRepeatPairings">
+						<input
+							type="checkbox"
+							role="switch"
+							id="allowRepeatPairings"
+							bind:value={session.config.allowRepeatPairings}
+						/>Allow Repeat Pairings
+					</label>
+					{#each availablePlayerIds as playerId}
+						<button
+							on:click={() => toggleActive(playerId)}
+							class="secondary pill {session.state.activePlayerIds.includes(playerId)
+								? ''
+								: 'outline'}">{playerMap[playerId].name}</button
+						>
+					{/each}
+				</form>
+			</div>
 		{/if}
 	</div>
 {/if}

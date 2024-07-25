@@ -44,7 +44,7 @@ export const createRound = async (
 	}
 
 	const sessionPlayers = allPlayerRatings.filter((player) =>
-		session.state.activePlayerIds.some((playerId) => playerId === player.id)
+		session.state.activePlayerIds.includes(player.id)
 	);
 
 	const pairingCounts = previousPairingCounts(sessionMatches);
@@ -83,13 +83,18 @@ const splitGroupForSitOuts = (
 	const sitOutCount =
 		totalPlayers > courtCapacity ? totalPlayers - courtCapacity : totalPlayers % 4;
 
+	console.log(sitOutCount);
+
 	const sitOutPlayerIds: string[] = [];
 	let currentIndex = session.state.sitOutIndex;
+	console.log(currentIndex);
 	for (let i = 0; i < sitOutCount; i++) {
 		sitOutPlayerIds.push(session.state.sitOutOrderPlayerIds[currentIndex]);
 		currentIndex = (currentIndex + 1) % session.state.sitOutOrderPlayerIds.length;
 	}
+	console.log(sitOutPlayerIds);
 	const playingPlayers = players.filter((player) => !sitOutPlayerIds.includes(player.id));
+	console.log(playingPlayers);
 
 	return [playingPlayers, sitOutPlayerIds];
 };
@@ -198,30 +203,28 @@ const previousPairingCounts = (matches: Match[]): Record<string, number> => {
 	return pairingCounts;
 };
 
-// TODO : Check this
-const addPlayerToSession = async (session: Session, player: Player) => {
-	if (!session.state.allPlayerIds.some((playerId) => playerId === player.id)) {
-		session.state.allPlayerIds.push(player.id);
+export const activateSessionPlayer = async (session: Session, playerId: string) => {
+	if (!session.state.allPlayerIds.some((id) => id === playerId)) {
+		session.state.allPlayerIds.push(playerId);
 	}
-	if (!session.state.activePlayerIds.some((playerId) => playerId === player.id)) {
-		session.state.activePlayerIds.push(player.id);
-		session.state.sitOutOrderPlayerIds.splice(session.state.sitOutIndex, 0, player.id);
+	if (!session.state.activePlayerIds.some((id) => id === playerId)) {
+		session.state.activePlayerIds.push(playerId);
+		session.state.sitOutOrderPlayerIds.splice(session.state.sitOutIndex, 0, playerId);
 		session.state.sitOutIndex += 1;
 	}
 };
 
-// TODO : Implement this
-const removePlayerFromSession = async (session: Session, player: Player) => {
-	let activeIndex = session.state.activePlayerIds.findIndex((playerId) => playerId === player.id);
+export const deactiveSessionPlayer = async (session: Session, playerId: string) => {
+	let activeIndex = session.state.activePlayerIds.findIndex((id) => id === playerId);
 	if (activeIndex >= 0) {
-		// splice
+		session?.state.activePlayerIds.splice(activeIndex, 1);
 	}
 
-	let sitOutIndex = session.state.sitOutOrderPlayerIds.findIndex(
-		(playerId) => playerId === player.id
-	);
+	let sitOutIndex = session.state.sitOutOrderPlayerIds.findIndex((id) => id === playerId);
 	if (sitOutIndex >= 0) {
-		// splice
-		// session.state.sitOutIndex
+		session?.state.sitOutOrderPlayerIds.splice(sitOutIndex, 1);
+		if (session.state.sitOutIndex >= session?.state.sitOutOrderPlayerIds.length) {
+			session.state.sitOutIndex = 0;
+		}
 	}
 };
