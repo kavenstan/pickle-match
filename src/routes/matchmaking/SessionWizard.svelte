@@ -51,7 +51,7 @@
 		playerMap = get(playersStore);
 		sortPlayers();
 		// Testing - prepick players
-		// selectedPlayerIds = sortedPlayers.slice(0, 14).map((x) => x.id);
+		selectedPlayerIds = sortedPlayers.slice(0, 14).map((x) => x.id);
 	});
 
 	const sortPlayers = (sort: string = 'name') => {
@@ -174,7 +174,7 @@
 		let newSession: Session = {
 			id: newId(),
 			config: {
-				courts: courts,
+				courts,
 				matchmakingType: matchmakingAlgorithm,
 				teamRatingDiffLimit,
 				matchRatingDiffLimit,
@@ -285,13 +285,13 @@
 					{/each}
 				</select>
 				<label for="courts">Courts</label>
-				<input type="text" id="courts" bind:value={courts} />
+				<input type="number" id="courts" bind:value={courts} />
 
 				{#if matchmakingAlgorithm === MatchmakingType.Balanced}
 					<label for="teamRatingDiffLimit">Team Rating Range</label>
-					<input type="text" id="teamRatingDiffLimit" bind:value={teamRatingDiffLimit} />
+					<input type="number" id="teamRatingDiffLimit" bind:value={teamRatingDiffLimit} />
 					<label for="matchRatingDiffLimit">Match Rating Range</label>
-					<input type="text" id="matchRatingDiffLimit" bind:value={matchRatingDiffLimit} />
+					<input type="number" id="matchRatingDiffLimit" bind:value={matchRatingDiffLimit} />
 					<label for="allowRepeatPairings">
 						<input
 							type="checkbox"
@@ -397,7 +397,7 @@ Std. Deviation: {Math.round(standardDeviation(orderedRatings))}
 
 <style>
 	.wizard {
-		max-width: 600px;
+		/*max-width: 600px;*/
 		margin: auto;
 	}
 

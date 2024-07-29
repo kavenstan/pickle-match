@@ -47,6 +47,7 @@
 	}
 	.content {
 		padding: 1rem;
+		width: 100%;
 	}
 
 	@media only screen and (max-width: 600px) {
