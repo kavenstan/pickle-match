@@ -51,7 +51,7 @@
 		playerMap = get(playersStore);
 		sortPlayers();
 		// Testing - prepick players
-		selectedPlayerIds = sortedPlayers.slice(0, 14).map((x) => x.id);
+		// selectedPlayerIds = sortedPlayers.slice(0, 14).map((x) => x.id);
 	});
 
 	const sortPlayers = (sort: string = 'name') => {
