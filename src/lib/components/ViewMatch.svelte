@@ -31,13 +31,13 @@
 		<div class="team right">
 			<div class="player">
 				<div class="name">{playerMap[match.team1[0]].name}</div>
-				{#if showRatingChanges}
+				{#if showRatingChanges && match.ratingChanges?.[match.team1[0]]}
 					<RatingPill value={Math.round(match.ratingChanges?.[match.team1[0]])} />
 				{/if}
 			</div>
 			<div class="player">
 				<div class="name">{playerMap[match.team1[1]].name}</div>
-				{#if showRatingChanges}
+				{#if showRatingChanges && match.ratingChanges?.[match.team1[1]]}
 					<RatingPill value={Math.round(match.ratingChanges?.[match.team1[1]])} />
 				{/if}
 			</div>
@@ -50,13 +50,13 @@
 		</div>
 		<div class="team">
 			<div class="player">
-				{#if showRatingChanges}
+				{#if showRatingChanges && match.ratingChanges?.[match.team2[0]]}
 					<RatingPill value={Math.round(match.ratingChanges?.[match.team2[0]])} />
 				{/if}
 				<div class="name">{playerMap[match.team2[0]].name}</div>
 			</div>
 			<div class="player">
-				{#if showRatingChanges}
+				{#if showRatingChanges && match.ratingChanges?.[match.team2[1]]}
 					<RatingPill value={Math.round(match.ratingChanges?.[match.team2[1]])} />
 				{/if}
 				<div class="name">{playerMap[match.team2[1]].name}</div>
