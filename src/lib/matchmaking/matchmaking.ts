@@ -254,7 +254,10 @@ export const generateRounds = (
 			const pair1AvgRating = (pair1[0].rating + pair1[1].rating) / 2;
 			const pair2AvgRating = (pair2[0].rating + pair2[1].rating) / 2;
 
-			if (session.config.matchRatingDiffLimit && Math.abs(pair1AvgRating - pair2AvgRating) > session.config.matchRatingDiffLimit) {
+			if (
+				session.config.matchRatingDiffLimit &&
+				Math.abs(pair1AvgRating - pair2AvgRating) > session.config.matchRatingDiffLimit
+			) {
 				isValidRound = false;
 				break;
 			}
@@ -305,14 +308,26 @@ export const generatePairingGroups = (
 
 	const results: PlayerRating[][] = [];
 	const pairs: PlayerRating[][] = [];
+	const maxCombinations = 100000;
 
-	const backtrack = (remainingPlayers: PlayerRating[]) => {
-		if (remainingPlayers.length === 0) {
-			results.push(pairs.flat());
-			return;
+	const backtrack = (remainingPlayers: PlayerRating[]): boolean => {
+		if (results.length >= maxCombinations) {
+			return true;
 		}
 
-		for (let i = 1; i < remainingPlayers.length; i++) {
+		if (remainingPlayers.length === 0) {
+			results.push(pairs.flat());
+			return results.length >= maxCombinations;
+		}
+
+		// Shuffle the remaining players to diversify the pairings
+		const shuffledIndices = [...Array(remainingPlayers.length).keys()].slice(1);
+		for (let i = shuffledIndices.length - 1; i > 0; i--) {
+			const j = Math.floor(Math.random() * (i + 1));
+			[shuffledIndices[i], shuffledIndices[j]] = [shuffledIndices[j], shuffledIndices[i]];
+		}
+
+		for (const i of shuffledIndices) {
 			const player1 = remainingPlayers[0];
 			const player2 = remainingPlayers[i];
 
@@ -324,10 +339,15 @@ export const generatePairingGroups = (
 				const nextRemainingPlayers = remainingPlayers
 					.slice(1, i)
 					.concat(remainingPlayers.slice(i + 1));
-				backtrack(nextRemainingPlayers);
+
+				if (backtrack(nextRemainingPlayers)) {
+					return true;
+				}
+
 				pairs.pop();
 			}
 		}
+		return false;
 	};
 
 	backtrack(players);
@@ -337,4 +357,3 @@ export const generatePairingGroups = (
 
 	return results;
 };
-
