@@ -217,17 +217,24 @@ const MAX_ALLOWED_RDIFF = 20; // just going to filter any heavily unbalanced mat
 // TODO: Pass in
 // const playerList: Player[] = [];
 
-import type { Player as AppPlayer, Match as AppMatch } from '$lib/types';
+import type { Match as AppMatch } from '$lib/types';
 import { newId } from '../../utils';
+import type { MatchmakingResult, PlayerRating } from '../matchmaking';
 
-export const runSmartGenerator = (appPlayers: AppPlayer[], sessionId: string) => {
+
+export const smartMatchmaking = (
+	players: PlayerRating[],
+	sessionId: string,
+	pairingCounts: Record<string, number>
+): MatchmakingResult => {
+
 	let appMatches: AppMatch[] = [];
 
-	let playerList: Player[] = appPlayers
-		.sort((a, b) => b.rating.rating - a.rating.rating)
+	let playerList: Player[] = players
+		.sort((a, b) => b.rating - a.rating)
 		.map((p, i) => new Player(p.id, i));
 
-	MAX_ROUNDS = playerList.length + 3; // generate 3 round more than we have players - stupid rounds can be dropped
+	MAX_ROUNDS = Math.max(playerList.length + 3, 10); // generate 3 round more than we have players - stupid rounds can be dropped
 	console.log('Adjusted MAX_ROUNDS is now : ' + MAX_ROUNDS);
 
 	// generating ALL possible pairings now from the playerList
@@ -401,13 +408,13 @@ export const runSmartGenerator = (appPlayers: AppPlayer[], sessionId: string) =>
 
 				console.log(
 					'\tCourt ' +
-						(g + 1) +
-						': ' +
-						e1.getMatchDescription() +
-						'\tCourt ' +
-						(g + 2) +
-						': ' +
-						e2.getMatchDescription()
+					(g + 1) +
+					': ' +
+					e1.getMatchDescription() +
+					'\tCourt ' +
+					(g + 2) +
+					': ' +
+					e2.getMatchDescription()
 				);
 			} else if (e1 != null && e2 == null) {
 				// in case there's a gap in the courts layout...
@@ -422,7 +429,10 @@ export const runSmartGenerator = (appPlayers: AppPlayer[], sessionId: string) =>
 	}
 	console.log('=======');
 	console.log(playerList);
-	return appMatches;
+
+	return {
+		matches: appMatches
+	};
 
 	function matchToAppMatch(match: Match, round: number): AppMatch {
 		let appMatch: AppMatch = {

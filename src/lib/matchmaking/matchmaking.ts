@@ -1,11 +1,11 @@
 import { playersPerCourt } from '../consts';
 import type { Player, Session, Match, State } from '$lib/types';
 import { MatchmakingType } from '$lib/enums';
-import { runSmartGenerator } from './algorithms/smart';
-import { randomMatchmaking } from './algorithms/random';
+import { smartMatchmaking } from './algorithms/smart';
 import { staticMatchmaking } from './algorithms/static';
+import { roundRobinMatchmaking } from './algorithms/round-robin';
 import { balancedMatchmaking } from './algorithms/balanced';
-import { teamPairingToken } from './matchmaking-utils';
+import { doubleFactorial, playerIds, teamPairingToken } from './matchmaking-utils';
 
 export interface PlayerRating {
 	id: string;
@@ -106,25 +106,31 @@ const createMatches = (
 ): Match[] => {
 	let matchPairings: Match[] = [];
 
+	let result: MatchmakingResult = {};
+
 	switch (session.config.matchmakingType) {
 		case 'Random':
-			matchPairings = []; //randomMatchmaking(players, session);
+			result = roundRobinMatchmaking(players, session, pairingCounts);
+			matchPairings = result.matches!;
 			break;
 		case 'RoundRobin':
-			matchPairings = []; //roundRobinMatchmaking(players, session, pairingCounts);
+			result = roundRobinMatchmaking(players, session, pairingCounts);
+			matchPairings = result.matches!;
 			break;
 		case 'Balanced':
-			const result = balancedMatchmaking(players, session, pairingCounts);
+			result = balancedMatchmaking(players, session, pairingCounts);
 			matchPairings = result.matches!;
 			break;
 		case 'Static':
-			matchPairings = []; //staticMatchmaking(players, session);
+			result = staticMatchmaking(players, session);
+			matchPairings = result.matches!;
 			break;
 		case 'Manual':
 			matchPairings = [];
 			break;
 		case 'Smart':
-			matchPairings = []; //runSmartGenerator(players, session.id);
+			result = smartMatchmaking(players, session.id, pairingCounts);
+			matchPairings = result.matches!;
 			break;
 		default:
 			throw new Error('Unknown matchmaking algorithm');
@@ -227,4 +233,127 @@ export const deactiveSessionPlayer = async (session: Session, playerId: string) 
 			session.state.sitOutIndex = 0;
 		}
 	}
+};
+
+export const generateRounds = (
+	players: PlayerRating[],
+	session: Session,
+	pairingCounts: Record<string, number>
+): PlayerRating[][][][] => {
+	const pairingGroups = generatePairingGroups(players, session.config.teamRatingDiffLimit);
+	const validRounds: PlayerRating[][][][] = [];
+
+	for (const group of pairingGroups) {
+		const round: PlayerRating[][][] = [];
+		let isValidRound = true;
+
+		for (let i = 0; i < group.length; i += 4) {
+			const pair1 = [group[i], group[i + 1]];
+			const pair2 = [group[i + 2], group[i + 3]];
+
+			const pair1AvgRating = (pair1[0].rating + pair1[1].rating) / 2;
+			const pair2AvgRating = (pair2[0].rating + pair2[1].rating) / 2;
+
+			if (
+				session.config.matchRatingDiffLimit &&
+				Math.abs(pair1AvgRating - pair2AvgRating) > session.config.matchRatingDiffLimit
+			) {
+				isValidRound = false;
+				break;
+			}
+
+			if (
+				!session.config.allowRepeatPairings &&
+				pairingCounts.hasOwnProperty(teamPairingToken(playerIds(pair1)))
+			) {
+				isValidRound = false;
+				break;
+			}
+
+			if (
+				!session.config.allowRepeatPairings &&
+				pairingCounts.hasOwnProperty(teamPairingToken(playerIds(pair2)))
+			) {
+				isValidRound = false;
+				break;
+			}
+
+			round.push([
+				[pair1[0], pair1[1]],
+				[pair2[0], pair2[1]]
+			]);
+		}
+
+		if (isValidRound) {
+			validRounds.push(round);
+		}
+	}
+
+	console.log(`${validRounds.length} valid rounds`);
+	// console.log(validRounds);
+
+	return validRounds;
+};
+
+export const generatePairingGroups = (
+	players: PlayerRating[],
+	ratingDifferenceLimit?: number
+): PlayerRating[][] => {
+	if (players.length % 4 !== 0) {
+		throw new Error('Number of players must be a multiple of 4');
+	}
+
+	const countAllCombinations = doubleFactorial(players.length - 1);
+	console.log(`Pairing Combinations: ${countAllCombinations}`);
+
+	const results: PlayerRating[][] = [];
+	const pairs: PlayerRating[][] = [];
+	const maxCombinations = 100000;
+
+	const backtrack = (remainingPlayers: PlayerRating[]): boolean => {
+		if (results.length >= maxCombinations) {
+			return true;
+		}
+
+		if (remainingPlayers.length === 0) {
+			results.push(pairs.flat());
+			return results.length >= maxCombinations;
+		}
+
+		// Shuffle the remaining players to diversify the pairings
+		const shuffledIndices = [...Array(remainingPlayers.length).keys()].slice(1);
+		for (let i = shuffledIndices.length - 1; i > 0; i--) {
+			const j = Math.floor(Math.random() * (i + 1));
+			[shuffledIndices[i], shuffledIndices[j]] = [shuffledIndices[j], shuffledIndices[i]];
+		}
+
+		for (const i of shuffledIndices) {
+			const player1 = remainingPlayers[0];
+			const player2 = remainingPlayers[i];
+
+			const ratingDifference = Math.abs(player1.rating - player2.rating);
+
+			if (ratingDifferenceLimit === undefined || ratingDifference <= ratingDifferenceLimit) {
+				const newPair = [player1, player2];
+				pairs.push(newPair);
+				const nextRemainingPlayers = remainingPlayers
+					.slice(1, i)
+					.concat(remainingPlayers.slice(i + 1));
+
+				if (backtrack(nextRemainingPlayers)) {
+					return true;
+				}
+
+				pairs.pop();
+			}
+		}
+		return false;
+	};
+
+	backtrack(players);
+
+	console.log(`Valid Pairing Rounds: ${results.length}`);
+	// console.log(results);
+
+	return results;
 };

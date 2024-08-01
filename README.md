@@ -44,8 +44,6 @@ You can preview the production build with `pnpm run preview`.
   - Player
    - Match History
   - Add a configurable timer to start the round?
-  - ELO calculation configuration
-    - Higher K for newer players ?
   - Arch
    - Server side pages
    - Caching
@@ -58,4 +56,3 @@ You can preview the production build with `pnpm run preview`.
  - Stats / Ratings not calculated on session end
  - Should be some provisional rating calculation between rounds
  - Matchmaking page 3 empty
- - Starting matchmaking does nothing - need to refresh to see

@@ -1,12 +1,15 @@
-import { getPresets } from '$lib/preset';
+import { getPresets } from '$lib/matchmaking/preset';
 import type { Player, Session, Match } from '$lib/types';
-import { createMatch } from '../matchmaking-utils';
+import type { MatchmakingResult, PlayerRating } from '../matchmaking';
+import { createMatch, playerIds } from '../matchmaking-utils';
 
-export const staticMatchmaking = (players: Player[], session: Session): Match[] => {
-	// Sort players by rating
-	players.sort((a, b) => a.rating.rating - b.rating.rating);
+export const staticMatchmaking = (
+	players: PlayerRating[],
+	session: Session
+): MatchmakingResult => {
 
-	// let matchPairings: Round[] = [];
+	players.sort((a, b) => a.rating - b.rating);
+
 	let matchPairings: Match[] = [];
 	const numPlayers = players.length;
 
@@ -20,14 +23,14 @@ export const staticMatchmaking = (players: Player[], session: Session): Match[] 
 			if (Array.isArray(match)) {
 				const team1 = [players[match[0] - 1]];
 				const team2 = [players[match[1] - 1]];
-				matches.push(createMatch(team1, team2, session));
-			} else {
-				sitOuts.push(players[match - 1]);
+				matches.push(createMatch(playerIds(team1), playerIds(team2), session));
 			}
 		});
 
 		matchPairings.push(...matches);
 	});
 
-	return matchPairings;
+	return {
+		matches: matchPairings
+	};
 };

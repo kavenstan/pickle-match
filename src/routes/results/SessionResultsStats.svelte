@@ -1,10 +1,11 @@
 <script lang="ts">
 	import { derived, get, writable } from 'svelte/store';
-	import type { Session, PlayerMatchStats, Player } from '$lib/types';
+	import type { Session, PlayerMatchStats, Player, Match } from '$lib/types';
 	import { onMount } from 'svelte';
 	import { playersStore } from '$lib/stores/player';
 
 	export let session: Session;
+	export let matches: Match[];
 
 	interface ComputedPlayerStats extends PlayerMatchStats {
 		id: string;
@@ -14,9 +15,41 @@
 	}
 
 	let playerMap: Record<string, Player>;
+	let averageTeamRatingDifference = 0;
+	let averageMatchRatingDifference = 0;
+
 	onMount(() => {
 		playerMap = get(playersStore);
 	});
+
+	$: if (playerMap && Object.keys(playerMap).length > 0 && matches.length > 0) {
+		let totalTeamDiff = 0;
+		let totalMatchDiff = 0;
+
+		if (matches) {
+			matches.forEach((match) => {
+				const player1Rating = playerMap[match.team1[0]].rating.rating;
+				const player2Rating = playerMap[match.team1[1]].rating.rating;
+				const player3Rating = playerMap[match.team2[0]].rating.rating;
+				const player4Rating = playerMap[match.team2[1]].rating.rating;
+
+				const team1Rating = (player1Rating + player2Rating) / 2;
+				const team2Rating = (player3Rating + player4Rating) / 2;
+
+				const team1RatingDiff = Math.abs(player1Rating - player2Rating);
+				const team2RatingDiff = Math.abs(player3Rating - player4Rating);
+
+				totalTeamDiff += team1RatingDiff + team2RatingDiff;
+
+				const matchRatingDiff = Math.abs(team1Rating - team2Rating);
+
+				totalMatchDiff += matchRatingDiff;
+			});
+
+			averageTeamRatingDifference = Math.round(totalTeamDiff / (matches.length * 2));
+			averageMatchRatingDifference = Math.round(totalMatchDiff / matches.length);
+		}
+	}
 
 	let sortedColumn: string = '';
 	let sortOrder: 'asc' | 'desc' = 'asc';
@@ -106,6 +139,12 @@
 	</tbody>
 </table>
 
+<div>
+	Average team rating difference: {averageTeamRatingDifference}
+	<br />
+	Average match rating difference: {averageMatchRatingDifference}
+</div>
+
 <style>
 	.stats {
 		max-width: 600px;
@@ -115,8 +154,5 @@
 	}
 	.stats th {
 		width: 30px;
-	}
-	.stats th.name {
-		/* width: 100%; */
 	}
 </style>
