@@ -95,7 +95,7 @@
 	<button on:click={() => copyToClipboard(session)}>DUPR</button>
 	<br /><br />
 	<button on:click={async () => await resetRatings(session)}>Reset Ratings</button>
-	<button on:click={async () => await calculateRatings(session)}>Calcuate Ratings</button>
+	<button on:click={async () => await calculateRatings(session)}>Calculate Ratings</button>
 	<br /><br />
 	<button on:click={async () => await resetStats(session)}>Reset Stats</button>
 	<button on:click={async () => await calculateStats(session)}>Calculate Stats</button>
