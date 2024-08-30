@@ -2,7 +2,7 @@
 	import { get } from 'svelte/store';
 	import { collection, doc, writeBatch, Timestamp } from 'firebase/firestore';
 	import { db } from '$lib/firebase';
-	import type { Session, Player, Match, Seeding } from '$lib/types';
+	import type { Session, Player, Match, Seeding, Rating } from '$lib/types';
 	import { addSession, getSessionsByDate } from '$lib/stores/session';
 	import { PERMISSION_PLAYER_WRITE, userSession, hasPermission } from '$lib/user';
 	import { addMatches } from '$lib/stores/match';
@@ -30,9 +30,16 @@
 	let messageLog = '';
 
 	let playerMap: Record<string, Player>;
+	let playerNameMap: Record<string, string> = {};
 
 	onMount(() => {
 		playerMap = get(playersStore);
+		for (const playerId in playerMap) {
+			if (playerMap.hasOwnProperty(playerId)) {
+				const player = playerMap[playerId];
+				playerNameMap[player.name] = player.id;
+			}
+		}
 	});
 
 	const addMessage = (newMessage: string) => {
@@ -101,18 +108,37 @@
 		const rows = content.split('\n');
 
 		return rows.map((row) => {
-			const columns = row.split(',');
+			var columns = row.split(',');
+
+			columns = fixNames(columns);
 
 			return {
 				date: columns[5],
-				player1_team1: columns[6],
-				player2_team1: columns[9],
-				player1_team2: columns[12],
-				player2_team2: columns[15],
+				player1_team1: playerNameMap[columns[6]],
+				player2_team1: playerNameMap[columns[9]],
+				player1_team2: playerNameMap[columns[12]],
+				player2_team2: playerNameMap[columns[15]],
 				score_team1: parseInt(columns[19], 10),
 				score_team2: parseInt(columns[20], 10)
 			};
 		});
+	};
+
+	const fixNames = (columns: string[]): string[] => {
+		columns[6] = fixName(columns[6]);
+		columns[9] = fixName(columns[9]);
+		columns[12] = fixName(columns[12]);
+		columns[15] = fixName(columns[15]);
+		return columns;
+	};
+
+	const fixName = (column: string): string => {
+		const fixed = column.toLowerCase().replace('damian', 'damien');
+		if (!playerNameMap.hasOwnProperty(fixed)) {
+			addMessage(`${fixed} name not found`);
+			throw Error(`${fixed} name not found`);
+		}
+		return fixed;
 	};
 
 	const processPlayerJson = async () => {
@@ -164,6 +190,16 @@
 
 			const courtCount = Math.floor(playerIds.length / 4);
 
+			let startRatings: Record<string, Rating> = Object.values(playerMap)
+				.filter((player) => playerIds.includes(player.id))
+				.reduce(
+					(acc, player) => {
+						acc[player.id] = { rating: player.rating.rating, rd: player.rating.rd };
+						return acc;
+					},
+					{} as Record<string, Rating>
+				);
+
 			// console.log(duprMatches[0]);
 			const session: Session = {
 				id: newId(),
@@ -171,9 +207,7 @@
 				location: 'Midleton',
 				config: {
 					courts: courtCount,
-					matchmakingType: MatchmakingType.RoundRobin,
-					maxIterations: 0,
-					ratingDiffLimit: 0
+					matchmakingType: MatchmakingType.RoundRobin
 				},
 				state: {
 					status: SessionStatus.Completed,
@@ -182,12 +216,12 @@
 					currentRound: 0,
 					sitOutOrderPlayerIds: [],
 					sitOutIndex: 0,
-					startRatings: {},
+					startRatings,
 					endRatings: {},
 					matchStats: {}
 				}
 			};
-			// console.log(session);
+			console.log(session);
 
 			var existingSessions = await getSessionsByDate(session.date);
 			if (existingSessions.length > 0) {
@@ -197,8 +231,6 @@
 
 			const matches: Match[] = duprMatches.map((row: any, i) => {
 				let round = Math.floor(i / courtCount) + 1;
-				console.log('Row', row);
-				console.log('Session', session);
 				return {
 					id: newId(),
 					sessionId: session.id,

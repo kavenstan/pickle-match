@@ -54,7 +54,7 @@ export const calculateRatings = async (session: Session) => {
 		return;
 	}
 
-	const startRatingMap = { ...session.state.endRatings };
+	const startRatingMap = { ...session.state.startRatings };
 
 	let sessionMatches = await getMatchesForSession(session.id);
 
